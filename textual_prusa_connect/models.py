@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, SecretStr
 
+
 class Printer(BaseModel):
     api_key: Optional[SecretStr] = None
     axis_x: Optional[float] = None
@@ -30,7 +31,6 @@ class Printer(BaseModel):
     supported_printer_models: list[str]
     temp: Optional[dict]
     uuid: SecretStr
-
 
 
 class BasicPrinter(BaseModel):
@@ -66,3 +66,4 @@ bed: [green]{self.temp['temp_bed']}/{self.temp['target_bed']}[/green]"""
 progress: [yellow]{int(self.job_info['progress']):d}%[/] \
 print time: [yellow]{elapsed}[/] \
 time left: [yellow]{remaining}[/]"""
+        return return_val

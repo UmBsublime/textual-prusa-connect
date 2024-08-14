@@ -12,6 +12,7 @@ from textual_prusa_connect.models import Printer
 
 class DashboardWidget(Widget):
     printer = reactive(..., recompose=True)
+
     def __init__(self, *children: Widget, printer: Printer) -> None:
         super().__init__(*children)
         self.printer = printer
@@ -35,7 +36,6 @@ class ToolStatus(DashboardWidget):
     def __init__(self, *children: Widget, printer: Printer) -> None:
         super().__init__(*children, printer=printer)
         self.border_title = "Tool Status"
-
 
     def compose(self):
         with Horizontal():
@@ -62,6 +62,7 @@ class CurrentlyPrinting(DashboardWidget):
             height: auto;
         }
         """
+
     def __init__(self, *children: Widget, printer: Printer) -> None:
         super().__init__(*children, printer=printer)
         self.border_title = "Currently Printing"

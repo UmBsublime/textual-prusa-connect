@@ -24,20 +24,14 @@ class PrinterHeader(Widget):
         Horizontal {
             height: auto;
         }
-        #icon {
-            width: auto;
-            border: tall orange;
-            background: orange;
-        }
-        
     }
     """
 
     printer = reactive(..., recompose=True)
+
     def __init__(self, *children: Widget, printer: Printer) -> None:
         super().__init__(*children)
         self.printer = printer
-
 
     def compose(self):
         with Horizontal():
@@ -77,6 +71,3 @@ class PrinterHeader(Widget):
 
     def update_printer(self):
         self.printer = self.app.printer
-
-
-

@@ -52,7 +52,7 @@ class PrusaConnectAPI:
     def get_login(self):
         return self.session.get(f'{self.base_url}login')
 
-    def get_jobs(self, limit: int = 3, offset: int = 0):
+    def get_jobs(self, limit: int = 5, offset: int = 0):
         return self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}')
 
     def get_groups(self):
@@ -65,3 +65,5 @@ class PrusaConnectAPI:
         # {command: "SET_PRINTER_READY"}
         # {command: "CANCEL_PRINTER_READY"}
         ...
+
+
