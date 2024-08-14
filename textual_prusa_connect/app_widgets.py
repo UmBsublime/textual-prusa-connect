@@ -3,7 +3,7 @@ import datetime
 from textual.containers import Vertical, Horizontal
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Static, Button, RichLog
+from textual.widgets import Static, Button
 
 from textual_prusa_connect.models import Printer
 
@@ -13,7 +13,8 @@ class PrinterHeader(Widget):
     PrinterHeader {
         height: auto;
         border: round lightgrey;
-        background:  $background-lighten-2;
+        background: $background-lighten-2;
+        border-title-color: $primary-lighten-2;
         Static {
             width: 1fr;
         }
@@ -37,11 +38,12 @@ class PrinterHeader(Widget):
         super().__init__(*children)
         self.printer = printer
 
+
     def compose(self):
         with Horizontal():
-            yield Static("  🖶  ", id='icon')
+            yield Static("  🖨  ", id='icon')
             with Vertical(classes='--cell'):
-                yield Static(f"name: [blue]{self.printer.name}")
+                yield Static(f"name: [blue]{self.printer.name} - {self.printer.printer_model}")
                 yield Static(f"state: [blue]{self.printer.printer_state}", classes='--lighter-background')
                 yield Static(f"location: [blue]{self.printer.location}")
             with Vertical(classes='--cell'):
@@ -54,7 +56,10 @@ class PrinterHeader(Widget):
                 yield Static(f"current z: [blue]{self.printer.axis_z}mm")
             with Vertical():
                 yield Static(f"speed: [blue]{self.printer.speed}%")
-                yield Static(f"progress: [blue]{self.printer.job_info['progress']:.1f}%", classes='--lighter-background')
+                if self.printer.job_info:
+                    yield Static(f"progress: [blue]{self.printer.job_info['progress']:.1f}%", classes='--lighter-background')
+                else:
+                    yield Static(' ', classes='--lighter-background')
                 eta = ''
                 if self.printer.job_info:
                     elapsed = datetime.timedelta(seconds=self.printer.job_info['time_printing'])
@@ -63,46 +68,15 @@ class PrinterHeader(Widget):
                         remaining = datetime.timedelta(seconds=self.printer.job_info['time_remaining'])
                     eta = f'[green]{elapsed} / {remaining}'
                 yield Static(eta)
-            yield Button("🚀 Set Ready")
+            yield Button("🚀 Set Ready", disabled=self.printer.printer_state == "PRINTING")
 
     def on_mount(self):
         self.update_printer()
+        self.border_title = f'[darkviolet]{self.printer.name} - {self.printer.printer_model}'
         self.set_interval(self.app.refresh_rate, self.update_printer)
 
     def update_printer(self):
         self.printer = self.app.printer
 
 
-class ToolStatus(Widget):
-    DEFAULT_CSS = """
-    ToolStatus {
-        height: 7;
-        border: round lightblue;
-        Vertical {
-            height: 7;
-        }
-    }
-    """
-    printer = reactive(..., recompose=True)
 
-    def __init__(self, *children: Widget, printer: Printer) -> None:
-        super().__init__(*children)
-        self.printer = printer
-        self.border_title = "Tool Status"
-
-    def compose(self):
-        with Horizontal():
-            if self.printer.slot:
-                for tool_id, tool in self.printer.slot['slots'].items():
-                    with Vertical():
-                        yield Static(f"tool: [green]{tool_id}", classes='--cell')
-                        yield Static(f"material: [green]{tool['material']}", classes='--lighter-background --cell')
-                        yield Static(f"temp: [green]{tool['temp']}", classes='--cell')
-                        yield Static(f"hotend fan: [green]{tool['fan_hotend']}", classes='--lighter-background --cell')
-                        yield Static(f"print fan: [green]{tool['fan_print']}", classes='--cell')
-    def on_mount(self):
-        self.update_printer()
-        self.set_interval(self.app.refresh_rate, self.update_printer)
-
-    def update_printer(self):
-        self.printer = self.app.printer

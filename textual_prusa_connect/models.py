@@ -21,14 +21,14 @@ class Printer(BaseModel):
     prusaconnect_api_key: Optional[SecretStr] = None
     name: str
     nozzle_diameter: float
-    speed: int
+    speed: Optional[int]
     slot: Optional[dict] = None
     slots: int
     sn: Optional[SecretStr] = None
     state_reason: Optional[str] = None
     # support: Optional[dict] = None
     supported_printer_models: list[str]
-    temp: dict
+    temp: Optional[dict]
     uuid: SecretStr
 
 

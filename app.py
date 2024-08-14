@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-import datetime
-from typing import Optional
-
-from pydantic import BaseModel, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from requests import Session
 
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Container
-from textual.widgets import Static, RichLog, TabPane, TabbedContent
+from textual.widgets import Static, RichLog, TabPane, TabbedContent, Rule, Header
 
-from textual_prusa_connect.widgets import PrinterHeader, ToolStatus
-from textual_prusa_connect.models import Printer
+from textual_prusa_connect.connect_api import PrusaConnectAPI
+from textual_prusa_connect.app_widgets import PrinterHeader
+from textual_prusa_connect.widgets.dashboard import ToolStatus, CurrentlyPrinting
 
 
 class Settings(BaseSettings):
@@ -24,69 +20,8 @@ class Settings(BaseSettings):
 
 SETTINGS = Settings()
 
-
-
-class PrusaConnectAPI:
-    def __init__(self, headers: dict[str, str]):
-        self.base_url = "https://connect.prusa3d.com/app/"
-        self.session = Session()
-        self.session.headers.update(headers)
-
-    def get_printers(self) -> list[Printer]:
-        response = self.session.get(self.base_url + "printers")
-        if response.ok:
-            return [Printer(**r) for r in response.json()['printers']]
-
-    def get_printer(self, printer_id) -> Printer | None:
-        response = self.session.get(f"{self.base_url}printers/{printer_id}")
-        if response.ok:
-            return Printer(**response.json())
-        return None
-
-    def get_storage(self):
-        ...
-
-    def get_cameras(self):
-        ...
-
-    def get_config(self):
-        ...
-
-    def get_files(self, printer: str | None = None, limit: int = 1):
-        return self.session.get(f'{self.base_url}printers/{printer}/files?limit={limit}')
-
-    def get_queue(self):
-        ...
-
-    def get_events(self, printer: str | None = None, limit: int = 3):
-        return self.session.get(f'{self.base_url}printers/{printer}/events?limit={limit}')
-
-    def get_supported_commands(self):
-        ...
-
-    def get_printer_types(self):
-        ...
-
-    def get_unseen(self):
-        ...
-
-    def get_login(self):
-        return self.session.get(f'{self.base_url}login')
-
-    def get_jobs(self, limit: int = 3, offset: int = 0):
-        return self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}')
-
-    def get_groups(self):
-        ...
-
-    def get_invitations(self):
-        ...
-
-    def set_sync(self):
-        # {command: "SET_PRINTER_READY"}
-        # {command: "CANCEL_PRINTER_READY"}
-        ...
-
+PRINTING_REFRESH = 5
+OTHER_REFRESH = 60
 
 class PrusaConnectApp(App):
     DEFAULT_CSS = """
@@ -107,27 +42,24 @@ class PrusaConnectApp(App):
                 ('q', 'quit', '')]
     CSS_PATH = "css.tcss"
     do_refresh = True
-    refresh_rate = 5
+    refresh_rate = PRINTING_REFRESH
     def __init__(self, headers: dict[str, str]):
         super().__init__()
         self.client = PrusaConnectAPI(headers)
         self.printer = self.client.get_printer(SETTINGS.printer_uuid)
 
     def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
         with Vertical():
             yield PrinterHeader(printer=self.printer)
             with TabbedContent() as tc:
                 with TabPane("Dashboard"):
-                    with Container():
-                        yield ToolStatus(printer=self.printer)
-                    with Container(classes='--category'):
-                        yield Static("Currently printing")
-                    with Container(classes='--category'):
-                        yield Static("Print history")
-                    with Container(classes='--category'):
-                        yield Static("Latest file uploads")
-                    with Container(classes='--category'):
-                        yield Static("Events log")
+                    yield ToolStatus(printer=self.printer)
+                    if self.printer.job_info:
+                        yield CurrentlyPrinting(printer=self.printer)
+                    yield Static("Print history", classes='--dashboard-category')
+                    yield Static("Latest file uploads", classes='--dashboard-category')
+                    yield Static("Events log", classes='--dashboard-category')
                 yield TabPane("Files")
                 yield TabPane("Queue")
                 yield TabPane("History")
@@ -142,18 +74,32 @@ class PrusaConnectApp(App):
         # self.query_one(TabbedContent).active = 'logs'
         self.update_printer(True)
         self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
+        self.set_interval(OTHER_REFRESH, self.background_loop)
+
+    def background_loop(self):
+        new_rate = OTHER_REFRESH
+        if self.printer.printer_state == 'PRINTING':
+            new_rate = PRINTING_REFRESH
+
+        if new_rate != self.refresh_rate:
+            self.refresh_rate = new_rate
+            self.refresh_timer.stop()
+            self.query_one(RichLog).write(f'new rate {self.refresh_rate}')
+            self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
 
     def update_printer(self, init: bool = False):
         self.printer = self.client.get_printer(self.printer.uuid.get_secret_value())
         if init:
             self.query_one(RichLog).write(self.printer)
-        self.query_one(RichLog).write('updated')
+        self.query_one(RichLog).write(f'updated {self.refresh_rate}')
 
     def action_toggle_refresh(self):
         if self.do_refresh:
             self.refresh_timer.pause()
+            self.query_one(TabbedContent).add_class('--app-paused')
         else:
             self.refresh_timer.resume()
+            self.query_one(TabbedContent).remove_class('--app-paused')
         self.do_refresh = not self.do_refresh
 
 
