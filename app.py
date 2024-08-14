@@ -8,7 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from requests import Session
 
 from textual.app import App, ComposeResult
-from textual.widgets import Static, RichLog
+from textual.containers import Vertical, Container
+from textual.widgets import Static, RichLog, TabPane, TabbedContent
+
+from textual_prusa_connect.widgets import PrinterHeader, ToolStatus
+from textual_prusa_connect.models import Printer
 
 
 class Settings(BaseSettings):
@@ -20,51 +24,6 @@ class Settings(BaseSettings):
 
 SETTINGS = Settings()
 
-class Printer(BaseModel):
-    printer_state: str
-    state_reason: Optional[str] = None
-    job_info: Optional[dict] = None
-    api_key: Optional[SecretStr] = None
-    axis_x: Optional[float] = None
-    axis_y: Optional[float] = None
-    axis_z: Optional[float] = None
-    temp: dict
-    flow: Optional[int] = None
-    speed: int
-    nozzle_diameter: float
-    slot: Optional[dict] = None
-    slots: int
-    printer_model: str
-    supported_printer_models: list[str]
-    filament: dict
-    support: Optional[dict] = None
-    printer_type: str
-    printer_type_name: str
-    name: str
-    firmware: str
-    sn: Optional[str] = None
-    uuid: str
-    prusaconnect_api_key: Optional[SecretStr] = None
-    owner: Optional[dict] = None
-
-    def basic_info(self) -> str:
-        return_val = f"""\
-name: [blue]{self.name}[/blue] \
-printer_model: [blue]{self.printer_model}[/blue]
-state: [blue]{self.printer_state}[/blue] \
-filament: [blue]{self.filament['material']}[/blue]
-nozzle: [green]{self.temp['temp_nozzle']}/{self.temp['target_nozzle']}[/green] \
-bed: [green]{self.temp['temp_bed']}/{self.temp['target_bed']}[/green]"""
-        if self.printer_state == 'PRINTING':
-            elapsed = datetime.timedelta(seconds=self.job_info['time_printing'])
-            remaining = datetime.timedelta(seconds=self.job_info['time_remaining'])
-            return_val += f""" toolhead: [green]{self.slot['active']}[/]
-[yellow]{self.job_info["display_name"]}[/]
-progress: [yellow]{int(self.job_info['progress']):d}%[/] \
-print time: [yellow]{elapsed}[/] \
-time left: [yellow]{remaining}[/]"""
-
-        return return_val
 
 
 class PrusaConnectAPI:
@@ -130,32 +89,61 @@ class PrusaConnectAPI:
 
 
 class PrusaConnectApp(App):
+    DEFAULT_CSS = """
+    PrusaConnectApp {
+        .--category {
+            border: round green;
+        }
+        TabbedContent {
+             height: 1fr;
+        }
+        Container {
+            height: auto;
+        }
+    }
+    """
+    CSS_PATH = "css.tcss"
+
+    refresh_rate = 5
     def __init__(self, headers: dict[str, str]):
-        self.client = PrusaConnectAPI(headers)
         super().__init__()
+        self.client = PrusaConnectAPI(headers)
+        self.printer = self.client.get_printer(SETTINGS.printer_uuid)
 
     def compose(self) -> ComposeResult:
-        printers = self.client.get_printers()
-        log = RichLog()
-        for printer in printers:
-            log.write(printer)
-            s = Static()
-            s.styles.border = ("round", "red")
-            s.styles.width = '50%'
-            yield s
-
-        yield log
+        with Vertical():
+            yield PrinterHeader(printer=self.printer)
+            with TabbedContent() as tc:
+                with TabPane("Dashboard"):
+                    with Container():
+                        yield ToolStatus(printer=self.printer)
+                    with Container(classes='--category'):
+                        yield Static("Currently printing")
+                    with Container(classes='--category'):
+                        yield Static("Print history")
+                    with Container(classes='--category'):
+                        yield Static("Latest file uploads")
+                    with Container(classes='--category'):
+                        yield Static("Events log")
+                yield TabPane("Files")
+                yield TabPane("Queue")
+                yield TabPane("History")
+                yield TabPane("Control")
+                yield TabPane("Stats")
+                yield TabPane("Metrics")
+                yield TabPane("Settings")
+                with TabPane("Log", id='logs'):
+                    yield RichLog()
 
     def on_mount(self):
-        self.update_printer(True)
-        self.set_interval(30, self.update_printer)
-
+        # self.query_one(TabbedContent).active = 'logs'
+        self.set_interval(self.refresh_rate, self.update_printer)
+        ...
     def update_printer(self, init: bool = False):
-        # self.query_one(RichLog).write("Printer updated")
-        printer = self.client.get_printer(SETTINGS.printer_uuid)
+        self.printer = self.client.get_printer(self.printer.uuid.get_secret_value())
         if init:
-            self.query_one(RichLog).write(printer)
-        self.query_one(Static).update(printer.basic_info())
+            self.query_one(RichLog).write(self.printer)
+        self.query_one(RichLog).write('updated')
 
 
 if __name__ == '__main__':

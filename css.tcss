@@ -1,0 +1,3 @@
+.--lighter-background {
+  background: $background-lighten-3;
+}
