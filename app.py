@@ -88,7 +88,12 @@ class PrusaConnectApp(App):
             self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
 
     def update_printer(self, init: bool = False):
-        self.printer = self.client.get_printer(self.printer.uuid.get_secret_value())
+        new_printer = self.client.get_printer(self.printer.uuid.get_secret_value())
+        if self.printer.printer_state != new_printer.printer_state:
+            self.notify(f"{self.printer.printer_state}->{new_printer.printer_state}",
+                        title='Stage change',
+                        timeout=10)
+        self.printer = new_printer
         if init:
             self.query_one(RichLog).write(self.printer)
         self.query_one(RichLog).write(f'updated {self.refresh_rate}')
