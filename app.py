@@ -102,8 +102,11 @@ class PrusaConnectApp(App):
         }
     }
     """
+    BINDINGS = [('p', 'toggle_refresh', 'Pause'),
+                ('s', 'screenshot', ''),
+                ('q', 'quit', '')]
     CSS_PATH = "css.tcss"
-
+    do_refresh = True
     refresh_rate = 5
     def __init__(self, headers: dict[str, str]):
         super().__init__()
@@ -137,13 +140,22 @@ class PrusaConnectApp(App):
 
     def on_mount(self):
         # self.query_one(TabbedContent).active = 'logs'
-        self.set_interval(self.refresh_rate, self.update_printer)
-        ...
+        self.update_printer(True)
+        self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
+
     def update_printer(self, init: bool = False):
         self.printer = self.client.get_printer(self.printer.uuid.get_secret_value())
         if init:
             self.query_one(RichLog).write(self.printer)
         self.query_one(RichLog).write('updated')
+
+    def action_toggle_refresh(self):
+        if self.do_refresh:
+            self.refresh_timer.pause()
+        else:
+            self.refresh_timer.resume()
+        self.do_refresh = not self.do_refresh
+
 
 
 if __name__ == '__main__':

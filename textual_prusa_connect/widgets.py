@@ -40,15 +40,15 @@ class PrinterHeader(Widget):
     def compose(self):
         with Horizontal():
             yield Static("  🖶  ", id='icon')
-            with Vertical():
+            with Vertical(classes='--cell'):
                 yield Static(f"name: [blue]{self.printer.name}")
                 yield Static(f"state: [blue]{self.printer.printer_state}", classes='--lighter-background')
                 yield Static(f"location: [blue]{self.printer.location}")
-            with Vertical():
+            with Vertical(classes='--cell'):
                 yield Static(f"tool: [blue]{self.printer.slot['active']}/{self.printer.slots}")
                 yield Static(f"nozzle diameter: [blue]{self.printer.nozzle_diameter}", classes='--lighter-background')
                 yield Static(f"material: [blue]{self.printer.filament['material']}")
-            with Vertical():
+            with Vertical(classes='--cell'):
                 yield Static(f"nozzle temp: [blue]{self.printer.temp['temp_nozzle']}/{self.printer.temp['target_nozzle']}")
                 yield Static(f"bed temp: [blue]{self.printer.temp['temp_bed']}/{self.printer.temp['target_bed']}", classes='--lighter-background')
                 yield Static(f"current z: [blue]{self.printer.axis_z}mm")
@@ -63,36 +63,7 @@ class PrinterHeader(Widget):
                         remaining = datetime.timedelta(seconds=self.printer.job_info['time_remaining'])
                     eta = f'[green]{elapsed} / {remaining}'
                 yield Static(eta)
-
-                """
-                with Horizontal():
-                    yield Static(f"name: [blue]{self.printer.name}")
-                    yield Static(f"model: [blue]{self.printer.printer_model}")
-                    yield Static(f"state: [blue]{self.printer.printer_state}")
-                    yield Static(f"progress: [blue]{self.printer.job_info['progress']:.1f}%")
-                    yield Static(f"location: [blue]{self.printer.location}")
-                    content = ''
-                    if self.printer.job_info:
-                        elapsed = datetime.timedelta(seconds=self.printer.job_info['time_printing'])
-                        remaining = datetime.timedelta(seconds=self.printer.job_info['time_remaining'])
-                        content = f'[green]{elapsed} / {remaining}'
-                    yield Static(content)
-                with Horizontal():
-                    yield Static("nozzle temp")
-                    yield Static("bed temp")
-                    yield Static("material")
-                    yield Static("speed")
-                    yield Static("current z")
-                    yield Static("tool")
-                with Horizontal():
-                    yield Static(f"[green]{self.printer.temp['temp_nozzle']}/{self.printer.temp['target_nozzle']}")
-                    yield Static(f"[green]{self.printer.temp['temp_bed']}/{self.printer.temp['target_bed']}")
-                    yield Static(f"[green]{self.printer.filament['material']}")
-                    yield Static(f"[green]{self.printer.speed}%")
-                    yield Static(f"[green]{self.printer.axis_z}mm")
-                    yield Static(f"[green]{self.printer.slot['active']}/{self.printer.slots}")
-                """
-            yield Button("🚀Set Ready")
+            yield Button("🚀 Set Ready")
 
     def on_mount(self):
         self.update_printer()
@@ -124,11 +95,11 @@ class ToolStatus(Widget):
             if self.printer.slot:
                 for tool_id, tool in self.printer.slot['slots'].items():
                     with Vertical():
-                        yield Static(f"tool: [green]{tool_id}")
-                        yield Static(f"material: [green]{tool['material']}", classes='--lighter-background ')
-                        yield Static(f"temp: [green]{tool['temp']}")
-                        yield Static(f"hotend fan: [green]{tool['fan_hotend']}", classes='--lighter-background ')
-                        yield Static(f"print fan: [green]{tool['fan_print']}")
+                        yield Static(f"tool: [green]{tool_id}", classes='--cell')
+                        yield Static(f"material: [green]{tool['material']}", classes='--lighter-background --cell')
+                        yield Static(f"temp: [green]{tool['temp']}", classes='--cell')
+                        yield Static(f"hotend fan: [green]{tool['fan_hotend']}", classes='--lighter-background --cell')
+                        yield Static(f"print fan: [green]{tool['fan_print']}", classes='--cell')
     def on_mount(self):
         self.update_printer()
         self.set_interval(self.app.refresh_rate, self.update_printer)
