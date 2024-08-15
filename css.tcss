@@ -21,7 +21,6 @@
   border-title-background: lightblue;
   background:  $background-lighten-2;
   padding-top: 1;
-  margin-bottom: 1;
 }
 
 #icon {

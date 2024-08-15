@@ -7,7 +7,7 @@ from textual.widgets import Static, RichLog, TabPane, TabbedContent, Header
 from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
-from textual_prusa_connect.widgets.dashboard import ToolStatus, CurrentlyPrinting, PrintHistory
+from textual_prusa_connect.widgets.dashboard import ToolStatus, CurrentlyPrinting, HistoryContainer, PrintJob, PrintFile
 
 SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
@@ -49,9 +49,12 @@ class PrusaConnectApp(App):
                         yield ToolStatus(printer=self.printer)
                         if self.printer.job_info:
                             yield CurrentlyPrinting(printer=self.printer)
-                        yield PrintHistory(jobs=self.client.get_jobs(limit=3))
-                        # yield Static("Print history", classes='--dashboard-category')
-                        yield Static("Latest file uploads", classes='--dashboard-category')
+                        yield HistoryContainer(items=self.client.get_files(SETTINGS.printer_uuid, limit=3),
+                                               item_type=PrintFile,
+                                               title="Latest file uploads")
+                        yield HistoryContainer(items=self.client.get_jobs(limit=3),
+                                               item_type=PrintJob,
+                                               title="Print history")
                         yield Static("Events log", classes='--dashboard-category')
                 yield TabPane("Files")
                 yield TabPane("Queue")

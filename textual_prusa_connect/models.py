@@ -82,4 +82,23 @@ class Job(BaseModel):
     source: str
     # source_info: dict
     # planned: dict
-    file: dict
+    file: 'File'
+
+
+class File(BaseModel):
+    type: Optional[str] = None
+    name: str
+    path: Optional[str] = None
+    m_timestamp: Optional[int] = None
+    size: int
+    display_name: str
+    upload_id: int
+    uploaded: int
+    meta: dict
+    # 'read_only': False,
+    # 'hash': 'yUbtnfNt9Ju2yVwvjIRp4gxZ5ik.',
+    # 'display_path': '/usb/NTS1StandB_0.4n_0.2mm_PLA_XLIS_1h1m.bgcode',
+    # 'team_id': 26502,
+    sync: dict
+    preview_url: str
+    preview_mimetype: str

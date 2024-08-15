@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from requests import Session
 
-from textual_prusa_connect.models import Printer, Job
+from textual_prusa_connect.models import Printer, Job, File
 
 
 class PrusaConnectAPI:
@@ -31,9 +31,11 @@ class PrusaConnectAPI:
     def get_config(self):
         ...
 
-    def get_files(self, printer: str | None = None, limit: int = 1):
-        return self.session.get(f'{self.base_url}printers/{printer}/files?limit={limit}')
-
+    def get_files(self, printer: str | None = None, limit: int = 1) -> list[File]:
+        retval = []
+        for file in self.session.get(f'{self.base_url}printers/{printer}/files?limit={limit}').json()['files']:
+            retval.append(File(**file))
+        return retval
     def get_queue(self):
         ...
 
@@ -54,14 +56,10 @@ class PrusaConnectAPI:
 
     def get_jobs(self, limit: int = 5, offset: int = 0) -> list[Job]:
         retval = []
-        other = 'state=FIN_OK&state=FIN_ERROR&state=FIN_STOPPED&state=UNKNOWN'
-        for result in self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}&{other}').json()['jobs']:
+        #other = 'state=FIN_OK&state=FIN_ERROR&state=FIN_STOPPED&state=UNKNOWN'
+        for result in self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}').json()['jobs']:
             retval.append(Job(**result))
         return retval
-        #return [Job(), Job(), Job()]
-
-    def get_job(self, job_id) -> Job:
-        return self.session.get(f'{self.base_url}jobs/{job_id}')
 
     def get_groups(self):
         ...
