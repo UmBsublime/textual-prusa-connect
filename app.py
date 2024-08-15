@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from textual.app import App, ComposeResult
-from textual.containers import Vertical
+from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Static, RichLog, TabPane, TabbedContent, Header
 
 from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
-from textual_prusa_connect.widgets.dashboard import ToolStatus, CurrentlyPrinting
+from textual_prusa_connect.widgets.dashboard import ToolStatus, CurrentlyPrinting, PrintHistory
 
 SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
@@ -45,12 +45,14 @@ class PrusaConnectApp(App):
             yield PrinterHeader(printer=self.printer)
             with TabbedContent():
                 with TabPane("Dashboard"):
-                    yield ToolStatus(printer=self.printer)
-                    if self.printer.job_info:
-                        yield CurrentlyPrinting(printer=self.printer)
-                    yield Static("Print history", classes='--dashboard-category')
-                    yield Static("Latest file uploads", classes='--dashboard-category')
-                    yield Static("Events log", classes='--dashboard-category')
+                    with VerticalScroll():
+                        yield ToolStatus(printer=self.printer)
+                        if self.printer.job_info:
+                            yield CurrentlyPrinting(printer=self.printer)
+                        yield PrintHistory(jobs=self.client.get_jobs(limit=3))
+                        # yield Static("Print history", classes='--dashboard-category')
+                        yield Static("Latest file uploads", classes='--dashboard-category')
+                        yield Static("Events log", classes='--dashboard-category')
                 yield TabPane("Files")
                 yield TabPane("Queue")
                 yield TabPane("History")

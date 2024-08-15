@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from requests import Session
 
-from textual_prusa_connect.models import Printer
+from textual_prusa_connect.models import Printer, Job
 
 
 class PrusaConnectAPI:
@@ -52,8 +52,16 @@ class PrusaConnectAPI:
     def get_login(self):
         return self.session.get(f'{self.base_url}login')
 
-    def get_jobs(self, limit: int = 5, offset: int = 0):
-        return self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}')
+    def get_jobs(self, limit: int = 5, offset: int = 0) -> list[Job]:
+        retval = []
+        other = 'state=FIN_OK&state=FIN_ERROR&state=FIN_STOPPED&state=UNKNOWN'
+        for result in self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}&{other}').json()['jobs']:
+            retval.append(Job(**result))
+        return retval
+        #return [Job(), Job(), Job()]
+
+    def get_job(self, job_id) -> Job:
+        return self.session.get(f'{self.base_url}jobs/{job_id}')
 
     def get_groups(self):
         ...

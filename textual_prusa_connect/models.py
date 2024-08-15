@@ -67,3 +67,19 @@ progress: [yellow]{int(self.job_info['progress']):d}%[/] \
 print time: [yellow]{elapsed}[/] \
 time left: [yellow]{remaining}[/]"""
         return return_val
+
+
+class Job(BaseModel):
+    id: int
+    printer_uuid: str
+    origin_id: int
+    path: str
+    state: str
+    # hash: str
+    # team_id: int
+    start: int
+    end: int
+    source: str
+    # source_info: dict
+    # planned: dict
+    file: dict

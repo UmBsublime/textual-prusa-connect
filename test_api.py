@@ -9,5 +9,7 @@ if __name__ == '__main__':
     }
 
     c = PrusaConnectAPI(my_headers)
-    r = c.get_jobs(limit=1, offset=3)
-    print(r.json())
+    r = c.get_jobs(limit=10, offset=3)
+    #r = c.get_job(r[0].id)
+
+    print(r[-1])

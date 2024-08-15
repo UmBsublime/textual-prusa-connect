@@ -2,6 +2,10 @@
   background: $background-lighten-3;
 }
 
+.--dimgrey-background {
+  background: #494949;
+}
+
 .--cell {
   border-right: round grey;
 
@@ -25,3 +29,14 @@
   border: tall darkviolet;
   background: blueviolet;
 }
+
+.--icon {
+  width: auto;
+  border: tall darkviolet;
+  background: blueviolet;
+}
+
+Vertical, Horizontal {
+  height: auto;
+}
+

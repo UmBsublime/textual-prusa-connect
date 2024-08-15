@@ -7,7 +7,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Static, ProgressBar, Rule
 
-from textual_prusa_connect.models import Printer
+from textual_prusa_connect.models import Printer, Job
 
 
 class DashboardWidget(Widget):
@@ -82,7 +82,7 @@ class CurrentlyPrinting(DashboardWidget):
       },
     """
         with Horizontal():
-            yield Static("  📁  ", id='icon')
+            yield Static("  📁  ", classes='--icon')
             with Vertical():
                 with Horizontal():
                     with Vertical():
@@ -110,3 +110,64 @@ class CurrentlyPrinting(DashboardWidget):
                     f'Weight (g): [green]{self.printer.job_info["model_weight"]-self.printer.job_info["weight_remaining"]:.2f}/{self.printer.job_info["model_weight"]:.2f}')
                 yield ProgressBar()
                 yield ProgressBar()
+
+
+class Print(Widget):
+    DEFAULT_CSS = """
+    Print {
+        height: 3;
+    }
+    Vertical, Horizontal {
+        width: 1fr;
+    }
+    Static {
+        width: 1fr;
+    }
+
+    """
+
+    def __init__(self, *children: Widget, job: Job) -> None:
+        super().__init__(*children)
+        self.job = job
+        self.tooltip = 'Click to open image preview in browser'
+
+    def compose(self):
+        with Horizontal():
+            yield Static("  🗋  ", classes='--icon')
+            with Vertical(classes='--lighter-background'):
+                with Horizontal():
+                    yield Static(f'[yellow]{self.job.file["name"]}')
+                    yield Static(f'[green]{self.job.state}')
+                with Horizontal(classes='--dimgrey-background'):
+                    yield Static(f'Printer: [blue]{self.job.file["meta"]["printer_model"]}', classes='--cell')
+                    yield Static(f'Material: [blue]{self.job.file["meta"]["filament_type"]}', classes='--cell')
+                    delta = datetime.timedelta(seconds=self.job.end - self.job.start)
+                    yield Static(f'Time: [blue] {delta}')
+                with Horizontal():
+                    yield Static(f'Layer height: [blue]{self.job.file["meta"]["layer_height"]}', classes='--cell')
+                    yield Static(f'Nozzle size: [blue]{self.job.file["meta"]["nozzle_diameter"]}', classes='--cell')
+                    yield Static(f'Print end: [blue]{datetime.datetime.fromtimestamp(self.job.end)}')
+
+
+    def on_click(self, event: 'Event') -> None:
+        self.app.open_url(f"https://connect.prusa3d.com{self.job.file['preview_url']}")
+
+class PrintHistory(Widget):
+    DEFAULT_CSS = """
+    PrintHistory {
+        height: auto;
+    }
+
+    """
+    def __init__(self, *children: Widget, jobs: list[Job]) -> None:
+        super().__init__(*children)
+        self.jobs = jobs
+        self.border_title = "Print History"
+        self.add_class('--dashboard-category')
+
+
+    def compose(self) -> ComposeResult:
+        for i, job in enumerate(self.jobs):
+            yield Print(job=job)
+            if i < len(self.jobs) - 1:
+                yield Static(' ')
