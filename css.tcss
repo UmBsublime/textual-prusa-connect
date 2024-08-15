@@ -23,6 +23,10 @@
   padding-top: 1;
 }
 
+.--file-widget {
+  height: 3;
+}
+
 #icon {
   width: auto;
   border: tall darkviolet;

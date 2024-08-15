@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import Callable
+
+from rich.text import TextType
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
-from textual.widgets import Static, RichLog, TabPane, TabbedContent, Header
+from textual.widget import Widget
+from textual.widgets import Static, RichLog, TabPane, TabbedContent, Header, LoadingIndicator
 
 from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
@@ -12,6 +16,30 @@ from textual_prusa_connect.widgets.dashboard import ToolStatus, CurrentlyPrintin
 SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
 OTHER_REFRESH = 60
+
+
+class LazyTabPane(TabPane):
+    loaded = False
+
+    def __init__(self, title: TextType, init_callable: Callable, *children: Widget):
+        super().__init__(title, *children)
+        self.init_callable = init_callable
+
+    def compose(self) -> ComposeResult:
+        yield VerticalScroll()
+        yield LoadingIndicator()
+
+    def on_show(self):
+        if self.loaded:
+            return
+        elements = self.init_callable()
+        self.query_one(LoadingIndicator).remove()
+        vs = self.query_one(VerticalScroll)
+        for i, element in enumerate(elements):
+            vs.mount(element)
+            if i < len(elements) - 1:
+                vs.mount(Static(" "))
+        self.loaded = True
 
 
 class PrusaConnectApp(App):
@@ -58,11 +86,11 @@ class PrusaConnectApp(App):
                         yield Static("Events log", classes='--dashboard-category')
                 yield TabPane("Printer files")
                 yield TabPane("Print Queue")
-                with TabPane("Print history"):
-                    with VerticalScroll():
-                        yield HistoryContainer(items=self.client.get_jobs(limit=25),
-                                               item_type=PrintJob,
-                                               title="Print history")
+                
+                def load_print_history():
+                    jobs = self.client.get_jobs(limit=25)
+                    return [PrintJob(job) for job in jobs]
+                yield LazyTabPane("Print history", load_print_history)
                 yield TabPane("Control")
                 yield TabPane("Statistics")
                 yield TabPane("Telemetry")

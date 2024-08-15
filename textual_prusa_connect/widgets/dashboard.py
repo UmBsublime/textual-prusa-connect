@@ -8,6 +8,7 @@ from textual.widget import Widget
 from textual.widgets import Static, ProgressBar, Rule
 
 from textual_prusa_connect.models import Printer, Job, File
+from textual_prusa_connect.utils import is_wsl
 
 
 class BaseDashboardWidget(Widget):
@@ -112,24 +113,36 @@ class CurrentlyPrinting(BaseDashboardWidget):
                 yield ProgressBar()
 
 
-class PrintJob(Widget):
+class BaseFileWidget(Widget):
     DEFAULT_CSS = """
-    PrintJob {
-        height: 3;
-    }
-    Vertical, Horizontal {
-        width: 1fr;
-    }
-    Static {
-        width: 1fr;
-    }
+        Vertical, Horizontal {
+            width: 1fr;
+        }
+        Static {
+            width: 1fr;
+        }
+        """
 
-    """
+    def __init__(self) -> None:
+        super().__init__()
+        self.file_path = None
+        self.add_class('--file-widget')
 
+    def on_click(self, event: 'Event') -> None:
+        url = f"https://connect.prusa3d.com{self.file_path}"
+        if not is_wsl():
+            self.app.open_url(url)
+            self.notify("Browser opened")
+        else:
+            self.notify("Not available on WSL\n"+url, severity="warning")
+
+
+class PrintJob(BaseFileWidget):
     def __init__(self, job: Job) -> None:
         super().__init__()
         self.job = job
         self.tooltip = 'Click to open image preview in browser'
+        self.file_path = self.job.file.preview_url
 
     def compose(self):
         with Horizontal():
@@ -149,28 +162,12 @@ class PrintJob(Widget):
                     yield Static(f'Print end: [blue]{datetime.datetime.fromtimestamp(self.job.end)}')
 
 
-    def on_click(self, event: 'Event') -> None:
-        self.app.open_url(f"https://connect.prusa3d.com{self.job.file.preview_url}")
-
-
-class PrintFile(Widget):
-    DEFAULT_CSS = """
-    PrintFile {
-        height: 3;
-    }
-    Vertical, Horizontal {
-        width: 1fr;
-    }
-    Static {
-        width: 1fr;
-    }
-
-    """
-
+class PrintFile(BaseFileWidget):
     def __init__(self, file: File) -> None:
         super().__init__()
         self.file = file
         self.tooltip = 'Click to open image preview in browser'
+        self.file_path = self.file.preview_url
 
     def compose(self):
         with Horizontal():
@@ -190,16 +187,11 @@ class PrintFile(Widget):
                     yield Static(f'Date added: [blue]{datetime.datetime.fromtimestamp(self.file.uploaded)}')
 
 
-    def on_click(self, event: 'Event') -> None:
-        self.app.open_url(f"https://connect.prusa3d.com{self.file.preview_url}")
-
-
 class HistoryContainer(Widget):
     DEFAULT_CSS = """
     HistoryContainer {
         height: auto;
     }
-
     """
 
     def __init__(self, items: list[Any], title='PLACEHOLDER', item_type=None) -> None:
