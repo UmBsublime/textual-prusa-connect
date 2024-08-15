@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 from rich.text import TextType
+from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
@@ -27,19 +28,27 @@ class LazyTabPane(TabPane):
 
     def compose(self) -> ComposeResult:
         yield VerticalScroll()
-        yield LoadingIndicator()
+
+    @work
+    async def update_data(self):
+        elements = self.init_callable()
+        vs = self.query_one(VerticalScroll)
+        for i, element in enumerate(elements):
+            await vs.mount(element)
+            if i < len(elements) - 1:
+                await vs.mount(Static(" "))
 
     def on_show(self):
         if self.loaded:
             return
-        elements = self.init_callable()
-        self.query_one(LoadingIndicator).remove()
-        vs = self.query_one(VerticalScroll)
-        for i, element in enumerate(elements):
-            vs.mount(element)
-            if i < len(elements) - 1:
-                vs.mount(Static(" "))
+        self.update_data()
         self.loaded = True
+
+
+class Toto(Widget):
+    def compose(self):
+        for job in self.client.get_jobs(limit=25):
+            yield PrintJob(job)
 
 
 class PrusaConnectApp(App):
@@ -84,17 +93,18 @@ class PrusaConnectApp(App):
                                                item_type=PrintJob,
                                                title="Print history")
                         yield Static("Events log", classes='--dashboard-category')
-                yield TabPane("Printer files")
-                yield TabPane("Print Queue")
-                
+                yield TabPane("Printer files", disabled=True)
+                yield TabPane("Print Queue", disabled=True)
+
                 def load_print_history():
                     jobs = self.client.get_jobs(limit=25)
                     return [PrintJob(job) for job in jobs]
                 yield LazyTabPane("Print history", load_print_history)
-                yield TabPane("Control")
-                yield TabPane("Statistics")
-                yield TabPane("Telemetry")
-                yield TabPane("Settings")
+
+                yield TabPane("Control", disabled=True)
+                yield TabPane("Statistics", disabled=True)
+                yield TabPane("Telemetry", disabled=True)
+                yield TabPane("Settings", disabled=True)
                 with TabPane("App logs", id='logs'):
                     yield RichLog()
 

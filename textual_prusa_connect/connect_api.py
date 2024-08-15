@@ -59,6 +59,7 @@ class PrusaConnectAPI:
         #other = 'state=FIN_OK&state=FIN_ERROR&state=FIN_STOPPED&state=UNKNOWN'
         for result in self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}').json()['jobs']:
             retval.append(Job(**result))
+        import time
         return retval
 
     def get_groups(self):
