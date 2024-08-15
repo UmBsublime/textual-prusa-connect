@@ -6,6 +6,7 @@ from rich.text import TextType
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static, RichLog, TabPane, TabbedContent, Header, LoadingIndicator
 
@@ -19,7 +20,16 @@ PRINTING_REFRESH = 5
 OTHER_REFRESH = 60
 
 
+class DataLoaded(Message):
+    """Data loaded message"""
+    def __init__(self, content):
+        self.content = content
+        super().__init__()
+
+
+
 class LazyTabPane(TabPane):
+    # reference https://gist.github.com/paulrobello/0a2f807ddd195c42f87cec9ff5825ac8
     loaded = False
 
     def __init__(self, title: TextType, init_callable: Callable, *children: Widget):
@@ -32,10 +42,14 @@ class LazyTabPane(TabPane):
     @work
     async def update_data(self):
         elements = self.init_callable()
+        self.post_message(DataLoaded(content=elements))
+
+    async def on_data_loaded(self, msg: DataLoaded) -> None:
+        msg.stop()
         vs = self.query_one(VerticalScroll)
-        for i, element in enumerate(elements):
+        for i, element in enumerate(msg.content):
             await vs.mount(element)
-            if i < len(elements) - 1:
+            if i < len(msg.content) - 1:
                 await vs.mount(Static(" "))
 
     def on_show(self):
@@ -43,13 +57,7 @@ class LazyTabPane(TabPane):
             return
         self.update_data()
         self.loaded = True
-
-
-class Toto(Widget):
-    def compose(self):
-        for job in self.client.get_jobs(limit=25):
-            yield PrintJob(job)
-
+        
 
 class PrusaConnectApp(App):
     DEFAULT_CSS = """
