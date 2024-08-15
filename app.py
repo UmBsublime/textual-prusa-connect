@@ -56,14 +56,18 @@ class PrusaConnectApp(App):
                                                item_type=PrintJob,
                                                title="Print history")
                         yield Static("Events log", classes='--dashboard-category')
-                yield TabPane("Files")
-                yield TabPane("Queue")
-                yield TabPane("History")
+                yield TabPane("Printer files")
+                yield TabPane("Print Queue")
+                with TabPane("Print history"):
+                    with VerticalScroll():
+                        yield HistoryContainer(items=self.client.get_jobs(limit=25),
+                                               item_type=PrintJob,
+                                               title="Print history")
                 yield TabPane("Control")
-                yield TabPane("Stats")
-                yield TabPane("Metrics")
+                yield TabPane("Statistics")
+                yield TabPane("Telemetry")
                 yield TabPane("Settings")
-                with TabPane("Log", id='logs'):
+                with TabPane("App logs", id='logs'):
                     yield RichLog()
 
     def on_mount(self):
