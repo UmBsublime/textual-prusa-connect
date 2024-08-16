@@ -8,8 +8,9 @@ from textual.reactive import reactive, Reactive
 from textual.widget import Widget
 from textual.widgets import Static, ProgressBar, Rule
 
-from textual_prusa_connect.models import Printer, Job, File
+from textual_prusa_connect.models import Printer, Job, File, Tool
 from textual_prusa_connect.utils import is_wsl
+from textual_prusa_connect.widgets.tool import ToolDetails, ToolList
 
 
 class BaseDashboardWidget(Widget):
@@ -27,29 +28,6 @@ class BaseDashboardWidget(Widget):
     def update_printer(self):
         self.printer = self.app.printer
 
-
-
-class ToolStatus(BaseDashboardWidget):
-    DEFAULT_CSS = """
-    ToolStatus {
-        height: 8;
-    }
-    """
-
-    def __init__(self, *children: Widget, printer: Printer) -> None:
-        super().__init__(*children, printer=printer)
-        self.border_title = "Tool Status"
-
-    def compose(self):
-        with Horizontal():
-            if self.printer.slot:
-                for tool_id, tool in self.printer.slot['slots'].items():
-                    with Vertical():
-                        yield Static(f"tool: [green]{tool_id}", classes='--cell')
-                        yield Static(f"material: [green]{tool['material']}", classes='--lighter-background --cell')
-                        yield Static(f"temp: [green]{tool['temp']}", classes='--cell')
-                        yield Static(f"hotend fan: [green]{tool['fan_hotend']}", classes='--lighter-background --cell')
-                        yield Static(f"print fan: [green]{tool['fan_print']}", classes='--cell')
 
 
 class CurrentlyPrinting(BaseDashboardWidget):
@@ -149,6 +127,8 @@ class CurrentlyPrinting(BaseDashboardWidget):
                         yield Static(f"Support material: [blue]{bool(self.file.meta['support_material'])}")
                         yield Static(f"Ironing: [blue]{bool(self.file.meta['ironing'])}")
                         yield Static(f"Cost: [blue]{self.file.meta['filament_cost']}$")
+
+
 class BaseFileWidget(Widget):
     DEFAULT_CSS = """
         Vertical, Horizontal {

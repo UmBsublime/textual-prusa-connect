@@ -13,10 +13,12 @@ from textual.widgets import Static, RichLog, TabPane, TabbedContent, Header, Loa
 from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
-from textual_prusa_connect.widgets.dashboard import ToolStatus, CurrentlyPrinting, HistoryContainer, PrintJob, PrintFile
+from textual_prusa_connect.widgets.tool import ToolList
+from textual_prusa_connect.widgets.dashboard import CurrentlyPrinting, HistoryContainer, PrintJob, PrintFile
 
 SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
+MAIN_REFRESH = 30
 OTHER_REFRESH = 60
 
 
@@ -90,7 +92,7 @@ class PrusaConnectApp(App):
             with TabbedContent():
                 with TabPane("Dashboard", id='dashboard'):
                     with VerticalScroll():
-                        yield ToolStatus(printer=self.printer)
+                        yield ToolList(printer=self.printer)
                         if self.printer.job_info:
                             yield CurrentlyPrinting(printer=self.printer, file=self.client.get_jobs(limit=1)[0].file)
                         yield HistoryContainer(items=self.client.get_files(SETTINGS.printer_uuid, limit=3),
@@ -119,14 +121,12 @@ class PrusaConnectApp(App):
         self.screen.set_focus(None)
         self.update_printer(True)
         self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
-        self.set_interval(OTHER_REFRESH, self.background_loop)
+        self.set_interval(MAIN_REFRESH, self.background_loop)
 
     def background_loop(self):
         new_rate = OTHER_REFRESH
-
         if self.printer.printer_state == 'PRINTING':
             new_rate = PRINTING_REFRESH
-
         if new_rate != self.refresh_rate:
             self.refresh_rate = new_rate
             self.refresh_timer.stop()
@@ -136,8 +136,8 @@ class PrusaConnectApp(App):
     def update_printer(self, init: bool = False):
         new_printer = self.client.get_printer(self.printer.uuid.get_secret_value())
         if self.printer.printer_state != new_printer.printer_state:
-            self.notify(f"{self.printer.printer_state}->{new_printer.printer_state}",
-                        title='Stage change',
+            self.notify(f"{self.printer.printer_state} -> {new_printer.printer_state}",
+                        title='State change',
                         timeout=10)
         self.printer = new_printer
         if init:

@@ -102,3 +102,11 @@ class File(BaseModel):
     sync: dict
     preview_url: str
     preview_mimetype: str
+
+
+class Tool(BaseModel):
+    id: int
+    material: str
+    temp: float
+    fan_hotend: float
+    fan_print: float
