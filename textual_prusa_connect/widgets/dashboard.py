@@ -1,9 +1,10 @@
 import datetime
+import time
 from typing import Any
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.reactive import reactive
+from textual.reactive import reactive, Reactive
 from textual.widget import Widget
 from textual.widgets import Static, ProgressBar, Rule
 
@@ -25,6 +26,7 @@ class BaseDashboardWidget(Widget):
 
     def update_printer(self):
         self.printer = self.app.printer
+
 
 
 class ToolStatus(BaseDashboardWidget):
@@ -53,7 +55,7 @@ class ToolStatus(BaseDashboardWidget):
 class CurrentlyPrinting(BaseDashboardWidget):
     DEFAULT_CSS = """
         CurrentlyPrinting {
-            height: 15;
+            height: auto;
         }
         Rule {
             height: 1;
@@ -62,29 +64,47 @@ class CurrentlyPrinting(BaseDashboardWidget):
         Horizontal, Vertical {
             height: auto;
         }
+        Static {
+            width: 1fr;
+        }
         """
 
-    def __init__(self, *children: Widget, printer: Printer) -> None:
+    def __init__(self, *children: Widget, printer: Printer, file: File) -> None:
         super().__init__(*children, printer=printer)
+        self.file = file
         self.border_title = "Currently Printing"
+        self.progress_bar = ProgressBar(total=100, show_eta=False)
+        self.weight_progress = ProgressBar(total=self.printer.job_info['model_weight'], show_eta=False)
+        self.height_progress = ProgressBar(total=self.printer.job_info['total_height'], show_eta=False)
+
+    def on_mount(self):
+        self.app.query_one('RichLog').write(self.file)
 
     def compose(self) -> ComposeResult:
 
         """
-        job_info={
-          'origin_id': 690,
-          'id': 677,
-          'path': '/usb/NTS1ST~1.BGC',
-          'progress': 0.0,
-          'preview_url':
-    '/app/teams/26502/files/yUbtnfNt9Ju2yVwvjIRp4gxZ5ik./preview',
-          'print_height': 12,
-          'total_height': 27.0,
-      },
+          'estimated_print_time': 31857,                                                                                                                              ▆▆
+          'estimated_printing_time_normal_mode': '8h 50m 57s',
+          'printer_model': 'XL5IS',
+          'layer_height': 0.25,
+          'fill_density': '15%',
+          'brim_width': 0,
+          'support_material': 1,
+          'ironing': 0,
+          'total_height': 47.45,
+          'max_layer_z': 47.45,
+          'filament_used_mm3': 167200.0,
+          'filament_used_cm3': 167.2,
+          'filament_used_m': 69.51575,
+          'filament_used_mm': 69515.75,
+          'filament_used_g': 207.33,
+          'filament_cost': 5.27,
+
     """
         with Horizontal():
-            yield Static("  📁  ", classes='--icon')
+            yield Static("  ⚙  ", classes='--icon')
             with Vertical():
+                yield Static(f'[yellow]{self.printer.job_info["display_name"]}')
                 with Horizontal():
                     with Vertical():
                         start = datetime.datetime.fromtimestamp(self.printer.job_info['start'])
@@ -93,26 +113,42 @@ class CurrentlyPrinting(BaseDashboardWidget):
                             self.printer.job_info['time_remaining'] +
                             self.printer.job_info['time_printing']
                         )
-                        yield Static(f'[yellow]{self.printer.job_info["display_name"]}', classes='--cell')
-                        yield Static(f"Started: [blue]{start}", classes='--lighter-background --cell')
+                        yield Static(f"Started: [blue]{start}")
+                        yield Static(f"Estimate end: [blue]")
+                        yield Static(f"Real End: [blue]{end}")
                         elapsed = datetime.timedelta(seconds=self.printer.job_info['time_printing'])
-                        yield Static(f"Printing time: [blue]{elapsed}", classes='--cell')
-
-                    with Vertical():
-                        yield ProgressBar()
                         remaining = '00:00:00'
                         if self.printer.job_info['time_remaining'] != -1:
                             remaining = datetime.timedelta(seconds=self.printer.job_info['time_remaining'])
-                        yield Static(f"End: [blue]{end}", classes='--lighter-background')
+                        yield Static(f"Printing time: [blue]{elapsed}")
+
                         yield Static(f"Remaining time: [blue]{remaining}")
-                yield Rule()
-
-                yield Static(
-                    f'Weight (g): [green]{self.printer.job_info["model_weight"]-self.printer.job_info["weight_remaining"]:.2f}/{self.printer.job_info["model_weight"]:.2f}')
-                yield ProgressBar()
-                yield ProgressBar()
-
-
+                        with Horizontal():
+                            self.progress_bar.update(progress=self.printer.job_info['progress'])
+                            yield self.progress_bar
+                            yield Static(f" [green]{elapsed}/{elapsed+remaining}")
+                        with Horizontal():
+                            remaining = self.printer.job_info['model_weight'] - self.printer.job_info[
+                                'weight_remaining']
+                            self.weight_progress.update(progress=remaining)
+                            yield self.weight_progress
+                            yield Static(
+                                f' [green]{remaining:.2f}/{self.printer.job_info["model_weight"]:.2f}[/] grams')
+                        with Horizontal():
+                            self.height_progress.update(progress=self.printer.axis_z)
+                            yield self.height_progress
+                            yield Static(
+                                f' [green]{self.printer.axis_z:.2f}/{self.printer.job_info["total_height"]:.2f}[/] mm')
+                    with Vertical():
+                        yield Static(f"Material: [blue]{self.file.meta['filament_type']}")
+                        yield Static(f"Nozzle: [blue]{self.file.meta['nozzle_diameter']}")
+                        yield Static(f"Bed temp: [blue]{self.file.meta['bed_temperature']}")
+                        yield Static(f"Layer height: [blue]{self.file.meta['layer_height']}")
+                        yield Static(f"Fill density: [blue]{self.file.meta['fill_density']}")
+                        yield Static(f"Brim width: [blue]{self.file.meta['brim_width']}")
+                        yield Static(f"Support material: [blue]{bool(self.file.meta['support_material'])}")
+                        yield Static(f"Ironing: [blue]{bool(self.file.meta['ironing'])}")
+                        yield Static(f"Cost: [blue]{self.file.meta['filament_cost']}$")
 class BaseFileWidget(Widget):
     DEFAULT_CSS = """
         Vertical, Horizontal {
@@ -154,12 +190,18 @@ class PrintJob(BaseFileWidget):
                 with Horizontal(classes='--dimgrey-background'):
                     yield Static(f'Printer: [blue]{self.job.file.meta["printer_model"]}', classes='--cell')
                     yield Static(f'Material: [blue]{self.job.file.meta["filament_type"]}', classes='--cell')
-                    delta = datetime.timedelta(seconds=self.job.end - self.job.start)
-                    yield Static(f'Real time: [blue] {delta}')
+                    if self.job.end != -1:
+                        delta = datetime.timedelta(seconds=self.job.end - self.job.start)
+                    else:
+                        delta = "---"
+                    yield Static(f'Real time: [blue]{delta}')
                 with Horizontal():
                     yield Static(f'Layer height: [blue]{self.job.file.meta["layer_height"]}', classes='--cell')
                     yield Static(f'Nozzle size: [blue]{self.job.file.meta["nozzle_diameter"]}', classes='--cell')
-                    yield Static(f'Print end: [blue]{datetime.datetime.fromtimestamp(self.job.end)}')
+                    if self.job.end == -1:
+                        yield Static(f'Print end: [blue]---')
+                    else:
+                        yield Static(f'Print end: [blue]{datetime.datetime.fromtimestamp(self.job.end)}')
 
 
 class PrintFile(BaseFileWidget):

@@ -27,7 +27,6 @@ class DataLoaded(Message):
         super().__init__()
 
 
-
 class LazyTabPane(TabPane):
     # reference https://gist.github.com/paulrobello/0a2f807ddd195c42f87cec9ff5825ac8
     loaded = False
@@ -41,8 +40,8 @@ class LazyTabPane(TabPane):
 
     @work
     async def update_data(self):
-        elements = self.init_callable()
-        self.post_message(DataLoaded(content=elements))
+        content = self.init_callable()
+        self.post_message(DataLoaded(content=content))
 
     async def on_data_loaded(self, msg: DataLoaded) -> None:
         msg.stop()
@@ -57,7 +56,7 @@ class LazyTabPane(TabPane):
             return
         self.update_data()
         self.loaded = True
-        
+
 
 class PrusaConnectApp(App):
     DEFAULT_CSS = """
@@ -89,11 +88,11 @@ class PrusaConnectApp(App):
         with Vertical():
             yield PrinterHeader(printer=self.printer)
             with TabbedContent():
-                with TabPane("Dashboard"):
+                with TabPane("Dashboard", id='dashboard'):
                     with VerticalScroll():
                         yield ToolStatus(printer=self.printer)
                         if self.printer.job_info:
-                            yield CurrentlyPrinting(printer=self.printer)
+                            yield CurrentlyPrinting(printer=self.printer, file=self.client.get_jobs(limit=1)[0].file)
                         yield HistoryContainer(items=self.client.get_files(SETTINGS.printer_uuid, limit=3),
                                                item_type=PrintFile,
                                                title="Latest file uploads")
@@ -117,12 +116,14 @@ class PrusaConnectApp(App):
                     yield RichLog()
 
     def on_mount(self):
+        self.screen.set_focus(None)
         self.update_printer(True)
         self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
         self.set_interval(OTHER_REFRESH, self.background_loop)
 
     def background_loop(self):
         new_rate = OTHER_REFRESH
+
         if self.printer.printer_state == 'PRINTING':
             new_rate = PRINTING_REFRESH
 

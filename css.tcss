@@ -27,6 +27,9 @@
   height: 3;
 }
 
+.--seperator {
+  border-top: round grey;
+}
 #icon {
   width: auto;
   border: tall darkviolet;
@@ -43,3 +46,6 @@ Vertical, Horizontal {
   height: auto;
 }
 
+PercentageStatus {
+  color: slateblue;
+}

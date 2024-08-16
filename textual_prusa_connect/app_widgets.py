@@ -12,7 +12,7 @@ class PrinterHeader(Widget):
     DEFAULT_CSS = """
     PrinterHeader {
         height: auto;
-        border: round lightgrey;
+        border: round lightblue;
         background: $background-lighten-2;
         border-title-color: $primary-lighten-2;
         Static {
@@ -35,7 +35,7 @@ class PrinterHeader(Widget):
 
     def compose(self):
         with Horizontal():
-            yield Static("  🖨  ", id='icon')
+            yield Static("  🖨   ", id='icon')
             with Vertical(classes='--cell'):
                 yield Static(f"name: [blue]{self.printer.name} - {self.printer.printer_model}")
                 yield Static(f"state: [blue]{self.printer.printer_state}", classes='--lighter-background')
