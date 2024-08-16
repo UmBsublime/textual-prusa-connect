@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from requests import Session
 
-from textual_prusa_connect.models import Printer, Job, File
+from textual_prusa_connect.models import Printer, Job, File, Event
 
 
 class PrusaConnectAPI:
@@ -36,11 +36,19 @@ class PrusaConnectAPI:
         for file in self.session.get(f'{self.base_url}printers/{printer}/files?limit={limit}').json()['files']:
             retval.append(File(**file))
         return retval
+
     def get_queue(self):
         ...
 
-    def get_events(self, printer: str | None = None, limit: int = 3):
-        return self.session.get(f'{self.base_url}printers/{printer}/events?limit={limit}')
+    def get_events(self, printer: str | None = None, limit: int = 5) -> list[Event]:
+        retval = []
+        try:
+            for event in self.session.get(f'{self.base_url}printers/{printer}/events?limit={limit}').json()['events']:
+                retval.append(Event(**event))
+        except KeyError:
+            retval = []
+
+        return retval
 
     def get_supported_commands(self):
         ...
@@ -56,10 +64,9 @@ class PrusaConnectAPI:
 
     def get_jobs(self, limit: int = 5, offset: int = 0) -> list[Job]:
         retval = []
-        #other = 'state=FIN_OK&state=FIN_ERROR&state=FIN_STOPPED&state=UNKNOWN'
+        # other = 'state=FIN_OK&state=FIN_ERROR&state=FIN_STOPPED&state=UNKNOWN'
         for result in self.session.get(f'{self.base_url}jobs?limit={limit}&offset={offset}').json()['jobs']:
             retval.append(Job(**result))
-        import time
         return retval
 
     def get_groups(self):
@@ -72,5 +79,3 @@ class PrusaConnectAPI:
         # {command: "SET_PRINTER_READY"}
         # {command: "CANCEL_PRINTER_READY"}
         ...
-
-

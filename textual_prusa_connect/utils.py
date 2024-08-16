@@ -1,5 +1,8 @@
 import platform
 import functools
+from typing import Literal
+
+from rich.text import TextType
 
 
 @functools.cache
@@ -20,3 +23,11 @@ def nicer_string(in_string: str) -> str:
     retval = in_string.capitalize()
     retval = retval.replace('_', ' ')
     return retval
+
+
+def color_str_from_dict(inp: str, in_value: dict[str, TextType], color: Literal['blue', 'green', 'orange']= 'blue') -> str:
+    string = nicer_string(inp)
+    value = in_value.get(inp, None)
+    if not value:
+        color = 'red'
+    return f"{string}: [{color}]{value}[/]"

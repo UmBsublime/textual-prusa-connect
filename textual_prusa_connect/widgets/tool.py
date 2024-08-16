@@ -15,7 +15,7 @@ class ToolDetails(Widget):
     }
     """
 
-    def __init__(self, tool: Tool, color = 'blue'):
+    def __init__(self, tool: Tool, color='blue'):
         super().__init__()
         self.tool = tool
         self.color = color

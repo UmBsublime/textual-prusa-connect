@@ -10,8 +10,9 @@ if __name__ == '__main__':
     }
 
     c = PrusaConnectAPI(my_headers)
-    r = c.get_files(printer=SETTINGS.printer_uuid, limit=1)
-    r = c.get_jobs()
+    #r = c.get_files(printer=SETTINGS.printer_uuid, limit=1)
+    #r = c.get_jobs()
     #r = c.get_job(r[0].id)
+    r = c.get_events(SETTINGS.printer_uuid)
 
     print(r)

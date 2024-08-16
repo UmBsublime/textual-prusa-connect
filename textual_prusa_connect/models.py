@@ -110,3 +110,11 @@ class Tool(BaseModel):
     temp: float
     fan_hotend: float
     fan_print: float
+
+
+class Event(BaseModel):
+    event: str
+    created: datetime.datetime
+    data: Optional[dict] = {}
+    server_time: datetime.datetime
+    source: str

@@ -56,7 +56,7 @@ class PrinterHeader(Widget):
                     yield Static(' ', classes='--lighter-background')
                 eta = ''
                 if self.printer.job_info:
-                    elapsed = datetime.timedelta(seconds=self.printer.job_info['time_printing'])
+                    elapsed = datetime.timedelta(seconds=self.printer.job_info.get('time_printing', 0))
                     remaining = '00:00:00'
                     if self.printer.job_info['time_remaining'] != -1:
                         remaining = datetime.timedelta(seconds=self.printer.job_info['time_remaining'])

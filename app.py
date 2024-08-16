@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 from rich.text import TextType
-from textual import on, work
+from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.message import Message
@@ -14,7 +14,8 @@ from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
 from textual_prusa_connect.widgets.tool import ToolList
-from textual_prusa_connect.widgets.dashboard import CurrentlyPrinting, HistoryContainer, PrintJob, PrintFile
+from textual_prusa_connect.widgets.dashboard import CurrentlyPrinting, HistoryContainer, PrintJob, PrintFile, \
+    DashboardPane
 
 SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
@@ -39,6 +40,7 @@ class LazyTabPane(TabPane):
 
     def compose(self) -> ComposeResult:
         yield VerticalScroll()
+        yield LoadingIndicator()
 
     @work
     async def update_data(self):
@@ -47,6 +49,7 @@ class LazyTabPane(TabPane):
 
     async def on_data_loaded(self, msg: DataLoaded) -> None:
         msg.stop()
+        await self.query_one(LoadingIndicator).remove()
         vs = self.query_one(VerticalScroll)
         for i, element in enumerate(msg.content):
             await vs.mount(element)
@@ -90,21 +93,8 @@ class PrusaConnectApp(App):
         with Vertical():
             yield PrinterHeader(printer=self.printer)
             with TabbedContent():
-                with TabPane("Dashboard", id='dashboard'):
-                    with VerticalScroll():
-                        yield ToolList(printer=self.printer)
-                        if self.printer.job_info:
-                            try:
-                                yield CurrentlyPrinting(printer=self.printer, file=self.client.get_jobs(limit=1)[0].file)
-                            except KeyError:
-                                ...
-                        yield HistoryContainer(items=self.client.get_files(SETTINGS.printer_uuid, limit=3),
-                                               item_type=PrintFile,
-                                               title="Latest file uploads")
-                        yield HistoryContainer(items=self.client.get_jobs(limit=3),
-                                               item_type=PrintJob,
-                                               title="Print history")
-                        yield Static("Events log", classes='--dashboard-category')
+                yield DashboardPane(self.client, self.printer)
+
                 yield TabPane("Printer files", disabled=True)
                 yield TabPane("Print Queue", disabled=True)
 
@@ -142,6 +132,12 @@ class PrusaConnectApp(App):
             self.notify(f"{self.printer.printer_state} -> {new_printer.printer_state}",
                         title='State change',
                         timeout=10)
+            # We are no longer printing, let's remove the currently printing block
+            if self.printer.printer_state == 'PRINTING':
+                self.query_one(CurrentlyPrinting).remove()
+            # NOT WORKING Started a new print, let's recompose to add the block back
+            if new_printer.printer_state == 'PRINTING':
+                self.query_one(DashboardPane).recompose()
         self.printer = new_printer
         if init:
             self.query_one(RichLog).write(self.printer)
@@ -155,7 +151,7 @@ class PrusaConnectApp(App):
         else:
             self.refresh_timer.resume()
             self.query_one(TabbedContent).remove_class('--app-paused')
-            self.query_one(RichLog).write('unpaused')
+            self.query_one(RichLog).write('resumed')
         self.do_refresh = not self.do_refresh
 
 
