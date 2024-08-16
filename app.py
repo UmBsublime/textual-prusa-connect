@@ -94,7 +94,10 @@ class PrusaConnectApp(App):
                     with VerticalScroll():
                         yield ToolList(printer=self.printer)
                         if self.printer.job_info:
-                            yield CurrentlyPrinting(printer=self.printer, file=self.client.get_jobs(limit=1)[0].file)
+                            try:
+                                yield CurrentlyPrinting(printer=self.printer, file=self.client.get_jobs(limit=1)[0].file)
+                            except KeyError:
+                                ...
                         yield HistoryContainer(items=self.client.get_files(SETTINGS.printer_uuid, limit=3),
                                                item_type=PrintFile,
                                                title="Latest file uploads")
@@ -142,7 +145,7 @@ class PrusaConnectApp(App):
         self.printer = new_printer
         if init:
             self.query_one(RichLog).write(self.printer)
-        self.query_one(RichLog).write(f'updated {self.refresh_rate}')
+        # self.query_one(RichLog).write(f'updated {self.refresh_rate}')
 
     def action_toggle_refresh(self):
         if self.do_refresh:

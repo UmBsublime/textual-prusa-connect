@@ -4,16 +4,14 @@ from textual.widget import Widget
 from textual.widgets import Static
 
 from textual_prusa_connect.models import Printer, Tool
+from textual_prusa_connect.utils import nicer_string
 
 
 class ToolDetails(Widget):
     DEFAULT_CSS = """
     ToolDetails {
-            width: 1fr;
-            height: auto;
-        }
-    Static {
         width: 1fr;
+        height: auto;
     }
     """
 
@@ -27,7 +25,7 @@ class ToolDetails(Widget):
             for i, item in enumerate(self.tool.model_dump().items()):
                 k, v = item
                 odd = i % 2 != 0
-                field = Static(f"{k}: [{self.color}]{v}")
+                field = Static(f"{nicer_string(k)}: [{self.color}]{v}")
                 if odd:
                     field.add_class('--lighter-background')
                 yield field
@@ -36,7 +34,7 @@ class ToolDetails(Widget):
 class ToolList(Widget):
     DEFAULT_CSS = """
         ToolList {
-            height: 8;
+            height: auto;
         }
         """
     printer = reactive(..., recompose=True)

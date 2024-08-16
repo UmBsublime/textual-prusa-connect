@@ -14,3 +14,9 @@ def is_wsl(v: str = platform.uname().release) -> int:
         return 2
 
     return 0
+
+
+def nicer_string(in_string: str) -> str:
+    retval = in_string.capitalize()
+    retval = retval.replace('_', ' ')
+    return retval

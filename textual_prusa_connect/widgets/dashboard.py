@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import time
 from typing import Any
 
@@ -61,14 +61,8 @@ class CurrentlyPrinting(BaseDashboardWidget):
     def compose(self) -> ComposeResult:
 
         """
-          'estimated_print_time': 31857,                                                                                                                              ▆▆
           'estimated_printing_time_normal_mode': '8h 50m 57s',
-          'printer_model': 'XL5IS',
-          'layer_height': 0.25,
-          'fill_density': '15%',
-          'brim_width': 0,
-          'support_material': 1,
-          'ironing': 0,
+
           'total_height': 47.45,
           'max_layer_z': 47.45,
           'filament_used_mm3': 167200.0,
@@ -76,28 +70,34 @@ class CurrentlyPrinting(BaseDashboardWidget):
           'filament_used_m': 69.51575,
           'filament_used_mm': 69515.75,
           'filament_used_g': 207.33,
-          'filament_cost': 5.27,
 
     """
-        with Horizontal():
+        with Horizontal() as main:
+            main.styles.padding = (0, 0, 1, 0)
             yield Static("  ⚙  ", classes='--icon')
             with Vertical():
                 yield Static(f'[yellow]{self.printer.job_info["display_name"]}')
                 with Horizontal():
                     with Vertical():
-                        start = datetime.datetime.fromtimestamp(self.printer.job_info['start'])
-                        end = datetime.datetime.fromtimestamp(
+                        start = datetime.fromtimestamp(self.printer.job_info['start'])
+                        end = datetime.fromtimestamp(
                             self.printer.job_info['start'] +
                             self.printer.job_info['time_remaining'] +
                             self.printer.job_info['time_printing']
                         )
                         yield Static(f"Started: [blue]{start}")
-                        yield Static(f"Estimate end: [blue]")
+                        estimated_end = self.printer.job_info['start'] + self.file.meta['estimated_print_time']
+                        yield Static(f"Prusa end: [blue]{datetime.fromtimestamp(estimated_end)}")
                         yield Static(f"Real End: [blue]{end}")
-                        elapsed = datetime.timedelta(seconds=self.printer.job_info['time_printing'])
+
+                        yield Static(f'Prusa duration: [blue]{timedelta(seconds=self.file.meta["estimated_print_time"])}')
+                        real_duration = self.printer.job_info['time_printing'] + self.printer.job_info['time_remaining']
+                        yield Static(f'Real duration: [blue]{timedelta(seconds=real_duration)}')
+
+                        elapsed = timedelta(seconds=self.printer.job_info['time_printing'])
                         remaining = '00:00:00'
                         if self.printer.job_info['time_remaining'] != -1:
-                            remaining = datetime.timedelta(seconds=self.printer.job_info['time_remaining'])
+                            remaining = timedelta(seconds=self.printer.job_info['time_remaining'])
                         yield Static(f"Printing time: [blue]{elapsed}")
 
                         yield Static(f"Remaining time: [blue]{remaining}")
@@ -118,7 +118,11 @@ class CurrentlyPrinting(BaseDashboardWidget):
                             yield Static(
                                 f' [green]{self.printer.axis_z:.2f}/{self.printer.job_info["total_height"]:.2f}[/] mm')
                     with Vertical():
-                        yield Static(f"Material: [blue]{self.file.meta['filament_type']}")
+                        yield Static(f"Printer: [blue]{self.file.meta['printer_model']}")
+                        yield Static(f"Filament: [blue]{self.file.meta['filament_type']}")
+                        yield Static(f"Filament length: [blue]{self.file.meta['filament_used_m']:.2f} meters")
+                        yield Static(f"Filament weight: [blue]{self.file.meta['filament_used_g']:.2f} grams")
+                        yield Static(f"Filament Cost: [blue]{self.file.meta['filament_cost']}$")
                         yield Static(f"Nozzle: [blue]{self.file.meta['nozzle_diameter']}")
                         yield Static(f"Bed temp: [blue]{self.file.meta['bed_temperature']}")
                         yield Static(f"Layer height: [blue]{self.file.meta['layer_height']}")
@@ -126,7 +130,6 @@ class CurrentlyPrinting(BaseDashboardWidget):
                         yield Static(f"Brim width: [blue]{self.file.meta['brim_width']}")
                         yield Static(f"Support material: [blue]{bool(self.file.meta['support_material'])}")
                         yield Static(f"Ironing: [blue]{bool(self.file.meta['ironing'])}")
-                        yield Static(f"Cost: [blue]{self.file.meta['filament_cost']}$")
 
 
 class BaseFileWidget(Widget):
@@ -171,7 +174,7 @@ class PrintJob(BaseFileWidget):
                     yield Static(f'Printer: [blue]{self.job.file.meta["printer_model"]}', classes='--cell')
                     yield Static(f'Material: [blue]{self.job.file.meta["filament_type"]}', classes='--cell')
                     if self.job.end != -1:
-                        delta = datetime.timedelta(seconds=self.job.end - self.job.start)
+                        delta = timedelta(seconds=self.job.end - self.job.start)
                     else:
                         delta = "---"
                     yield Static(f'Real time: [blue]{delta}')
@@ -181,7 +184,7 @@ class PrintJob(BaseFileWidget):
                     if self.job.end == -1:
                         yield Static(f'Print end: [blue]---')
                     else:
-                        yield Static(f'Print end: [blue]{datetime.datetime.fromtimestamp(self.job.end)}')
+                        yield Static(f'Print end: [blue]{datetime.fromtimestamp(self.job.end)}')
 
 
 class PrintFile(BaseFileWidget):
@@ -201,12 +204,12 @@ class PrintFile(BaseFileWidget):
                 with Horizontal(classes='--dimgrey-background'):
                     yield Static(f'Printer: [blue]{self.file.meta["printer_model"]}', classes='--cell')
                     yield Static(f'Material: [blue]{self.file.meta["filament_type"]}', classes='--cell')
-                    delta = datetime.timedelta(seconds=self.file.meta['estimated_print_time'])
+                    delta = timedelta(seconds=self.file.meta['estimated_print_time'])
                     yield Static(f'Estimate time: [blue] {delta}')
                 with Horizontal():
                     yield Static(f'Layer height: [blue]{self.file.meta["layer_height"]}', classes='--cell')
                     yield Static(f'Nozzle size: [blue]{self.file.meta["nozzle_diameter"]}', classes='--cell')
-                    yield Static(f'Date added: [blue]{datetime.datetime.fromtimestamp(self.file.uploaded)}')
+                    yield Static(f'Date added: [blue]{datetime.fromtimestamp(self.file.uploaded)}')
 
 
 class HistoryContainer(Widget):
