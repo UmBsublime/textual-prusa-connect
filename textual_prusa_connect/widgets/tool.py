@@ -1,8 +1,11 @@
+from typing import Literal
+
 from textual.containers import Vertical, Horizontal
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Static
 
+from textual_prusa_connect.messages import PrinterUpdated
 from textual_prusa_connect.models import Printer, Tool
 from textual_prusa_connect.utils import nicer_string
 
@@ -15,7 +18,7 @@ class ToolDetails(Widget):
     }
     """
 
-    def __init__(self, tool: Tool, color='blue'):
+    def __init__(self, tool: Tool, color: Literal['blue', 'green', 'orange']='blue'):
         super().__init__()
         self.tool = tool
         self.color = color
@@ -37,16 +40,17 @@ class ToolList(Widget):
             height: auto;
         }
         """
+
     printer = reactive(..., recompose=True)
 
     def __init__(self, *children: Widget, printer: Printer) -> None:
         super().__init__(*children)
         self.printer = printer
         self.add_class('--dashboard-category')
+        self.add_class('--requires-printer')
         self.border_title = 'Tool List'
 
     def compose(self):
-
         with Horizontal():
             for i, item in enumerate(self.printer.slot['slots'].items()):
                 slot, value = item
@@ -59,9 +63,6 @@ class ToolList(Widget):
                     tool.add_class('--cell')
                 yield tool
 
-    def on_mount(self):
-        self.update_printer()
-        self.set_interval(self.app.refresh_rate, self.update_printer)
-
-    def update_printer(self):
-        self.printer = self.app.printer
+    def on_printer_updated(self, msg: PrinterUpdated):
+        if msg.printer != self.printer:
+            self.printer = msg.printer

@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 import platform
 import functools
 from typing import Literal
@@ -25,9 +26,20 @@ def nicer_string(in_string: str) -> str:
     return retval
 
 
-def color_str_from_dict(inp: str, in_value: dict[str, TextType], color: Literal['blue', 'green', 'orange']= 'blue') -> str:
+def color_str_from_dict(inp: str, in_value: dict[str, TextType],
+                        color: Literal['blue', 'green', 'orange']= 'blue',
+                        is_timedelta=False,
+                        is_timestamp=False) -> str:
+
     string = nicer_string(inp)
     value = in_value.get(inp, None)
     if not value:
         color = 'red'
-    return f"{string}: [{color}]{value}[/]"
+        return f"{string}: [{color}]{value}[/]"
+    retval = f"{string}: [{color}]{value}[/]"
+    if is_timedelta:
+        retval = f"{string}: [{color}]{timedelta(int(value))}[/]"
+    if is_timestamp:
+        retval = f"{string}: [{color}]{datetime.fromtimestamp(int(value))}[/]"
+
+    return retval

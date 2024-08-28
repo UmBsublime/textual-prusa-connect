@@ -12,7 +12,7 @@ class Printer(BaseModel):
     filament: dict
     firmware: str
     flow: Optional[int] = None
-    job_info: Optional[dict] = None
+    job_info: Optional[dict] = {}
     location: str
     owner: Optional[dict] = None
     printer_model: str
@@ -92,16 +92,16 @@ class File(BaseModel):
     m_timestamp: Optional[int] = None
     size: int
     display_name: str
-    upload_id: int
-    uploaded: int
-    meta: dict
+    upload_id: Optional[int] = None
+    uploaded: Optional[int] = None
+    meta: Optional[dict] = {}
     # 'read_only': False,
     # 'hash': 'yUbtnfNt9Ju2yVwvjIRp4gxZ5ik.',
     # 'display_path': '/usb/NTS1StandB_0.4n_0.2mm_PLA_XLIS_1h1m.bgcode',
     # 'team_id': 26502,
     sync: dict
-    preview_url: str
-    preview_mimetype: str
+    preview_url: Optional[str] = None
+    preview_mimetype: Optional[str] = None
 
 
 class Tool(BaseModel):

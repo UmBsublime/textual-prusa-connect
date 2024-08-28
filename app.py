@@ -13,14 +13,14 @@ from textual.widgets import Static, RichLog, TabPane, TabbedContent, Header, Loa
 from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
+from textual_prusa_connect.messages import PrinterUpdated
+from textual_prusa_connect.widgets.dashboard import CurrentlyPrinting, PrintJob, DashboardPane
 from textual_prusa_connect.widgets.tool import ToolList
-from textual_prusa_connect.widgets.dashboard import CurrentlyPrinting, HistoryContainer, PrintJob, PrintFile, \
-    DashboardPane
 
 SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
 MAIN_REFRESH = 30
-OTHER_REFRESH = 60
+OTHER_REFRESH = 30
 
 
 class DataLoaded(Message):
@@ -133,11 +133,14 @@ class PrusaConnectApp(App):
                         title='State change',
                         timeout=10)
             # We are no longer printing, let's remove the currently printing block
-            if self.printer.printer_state == 'PRINTING':
-                self.query_one(CurrentlyPrinting).remove()
+            #if self.printer.printer_state != 'PRINTING':
+            #    self.query_one(CurrentlyPrinting).remove()
             # NOT WORKING Started a new print, let's recompose to add the block back
             if new_printer.printer_state == 'PRINTING':
                 self.query_one(DashboardPane).recompose()
+
+        for widget in self.query('.--requires-printer'):
+            widget.post_message(PrinterUpdated(printer=new_printer))
         self.printer = new_printer
         if init:
             self.query_one(RichLog).write(self.printer)

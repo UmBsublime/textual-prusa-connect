@@ -5,6 +5,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Static, Button
 
+from textual_prusa_connect.messages import PrinterUpdated
 from textual_prusa_connect.models import Printer
 
 
@@ -32,6 +33,7 @@ class PrinterHeader(Widget):
     def __init__(self, *children: Widget, printer: Printer) -> None:
         super().__init__(*children)
         self.printer = printer
+        self.add_class('--requires-printer')
 
     def compose(self):
         with Horizontal():
@@ -58,16 +60,15 @@ class PrinterHeader(Widget):
                 if self.printer.job_info:
                     elapsed = datetime.timedelta(seconds=self.printer.job_info.get('time_printing', 0))
                     remaining = '00:00:00'
-                    if self.printer.job_info['time_remaining'] != -1:
+                    if self.printer.job_info.get('time_remaining', None) and self.printer.job_info['time_remaining'] != -1:
                         remaining = datetime.timedelta(seconds=self.printer.job_info['time_remaining'])
                     eta = f'[green]{elapsed} / {remaining}'
                 yield Static(eta)
             yield Button("🚀 Set Ready", disabled=self.printer.printer_state == "PRINTING")
 
     def on_mount(self):
-        self.update_printer()
         self.border_title = f'[darkviolet]{self.printer.name} - {self.printer.printer_model}'
-        self.set_interval(self.app.refresh_rate, self.update_printer)
 
-    def update_printer(self):
-        self.printer = self.app.printer
+    def on_printer_updated(self, msg: PrinterUpdated):
+        if msg.printer != self.printer:
+            self.printer = msg.printer
