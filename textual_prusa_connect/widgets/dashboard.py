@@ -2,15 +2,16 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical, VerticalScroll, Container
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Static, ProgressBar, TabPane
+from textual.widgets import ProgressBar, Static, TabPane
 
-from textual_prusa_connect.models import Printer, Job, File
-from textual_prusa_connect.utils import is_wsl, color_str_from_dict
-from textual_prusa_connect.widgets.tool import ToolList
 from textual_prusa_connect.messages import PrinterUpdated
+from textual_prusa_connect.models import File, Printer
+from textual_prusa_connect.widgets import Pretty
+from textual_prusa_connect.widgets.file import PrintJobWidget, FileHistory
+from textual_prusa_connect.widgets.tool import ToolList
 
 
 class CurrentlyPrinting(Widget):
@@ -112,13 +113,13 @@ class CurrentlyPrinting(Widget):
                                 yield Static(
                                     f' [green]{self.printer.axis_z:.2f}/{self.printer.job_info["total_height"]:.2f}[/] mm (height)')
                         with Vertical():
-                            yield Static(color_str_from_dict('printer_model', self.file.meta))
-                            yield Static(color_str_from_dict('filament_type', self.file.meta))
+                            yield Pretty(self.file.meta, 'printer_model')
+                            yield Pretty(self.file.meta, 'filament_type')
                             yield Static(f"Filament length: [blue]{self.file.meta['filament_used_m']:.2f} meters")
                             yield Static(f"Filament weight: [blue]{self.file.meta['filament_used_g']:.2f} grams")
-                            yield Static(f"{color_str_from_dict('filament_cost', self.file.meta)}$")
-                            yield Static(color_str_from_dict('nozzle_diameter', self.file.meta))
-                            yield Static(color_str_from_dict('bed_temperature', self.file.meta))
+                            yield Pretty(self.file.meta, 'filament_cost', unit="$")
+                            yield Pretty(self.file.meta, 'nozzle_diameter')
+                            yield Pretty(self.file.meta, 'bed_temperature')
                             yield Static(f"Layer height: [blue]{self.file.meta['layer_height']}")
                             yield Static(f"Fill density: [blue]{self.file.meta['fill_density']}")
                             yield Static(f"Brim width: [blue]{self.file.meta['brim_width']}")
@@ -127,88 +128,6 @@ class CurrentlyPrinting(Widget):
         except (TypeError, KeyError):
             self.notify("Couldn't load 'currently printing' section", severity='error')
             self.remove()
-
-
-
-
-class BaseFileWidget(Widget):
-    DEFAULT_CSS = """
-        Vertical, Horizontal {
-            width: 1fr;
-        }
-        Static {
-            width: 1fr;
-        }
-        """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.file_path = None
-        self.add_class('--file-widget')
-
-    def on_click(self) -> None:
-        url = f"https://connect.prusa3d.com{self.file_path}"
-        if not is_wsl():
-            self.app.open_url(url)
-            self.notify("Browser opened")
-        else:
-            self.notify("Not available on WSL\n"+url, severity="warning")
-
-
-class PrintJob(BaseFileWidget):
-    def __init__(self, job: Job) -> None:
-        super().__init__()
-        self.job = job
-        self.tooltip = 'Click to open image preview in browser'
-        self.file_path = self.job.file.preview_url
-
-    def compose(self):
-        with Horizontal():
-            yield Static("  🗋  ", classes='--icon')
-            with Vertical(classes='--lighter-background'):
-                with Horizontal():
-                    yield Static(f'[yellow]{self.job.file.name}')
-                    yield Static(f'[green]{self.job.state}')
-                with Horizontal(classes='--dimgrey-background'):
-                    yield Static(color_str_from_dict('printer_model', self.job.file.meta), classes='--cell')
-                    yield Static(color_str_from_dict('filament_type', self.job.file.meta), classes='--cell')
-                    if self.job.end != -1:
-                        delta = timedelta(seconds=self.job.end - self.job.start)
-                    else:
-                        delta = "---"
-                    yield Static(f'Real time: [blue]{delta}')
-                with Horizontal():
-                    yield Static(color_str_from_dict('layer_height', self.job.file.meta), classes='--cell')
-
-                    yield Static(color_str_from_dict('nozzle_diameter', self.job.file.meta), classes='--cell')
-                    if self.job.end == -1:
-                        yield Static(f'Print end: [blue]---')
-                    else:
-                        yield Static(f'Print end: [blue]{datetime.fromtimestamp(self.job.end)}')
-
-
-class PrintFile(BaseFileWidget):
-    def __init__(self, file: File) -> None:
-        super().__init__()
-        self.file = file
-        self.tooltip = 'Click to open image preview in browser'
-        self.file_path = self.file.preview_url
-
-    def compose(self):
-        with Horizontal():
-            yield Static("  🗋  ", classes='--icon')
-            with Vertical(classes='--lighter-background'):
-                with Horizontal():
-                    yield Static(f'[yellow]{self.file.name}')
-                    yield Static(f'[green]')
-                with Horizontal(classes='--dimgrey-background'):
-                    yield Static(color_str_from_dict("printer_model", self.file.meta), classes='--cell')
-                    yield Static(color_str_from_dict("filament_type", self.file.meta), classes='--cell')
-                    yield Static(color_str_from_dict('estimated_print_time', self.file.meta, is_timedelta=True))
-                with Horizontal():
-                    yield Static(color_str_from_dict("layer_height", self.file.meta), classes='--cell')
-                    yield Static(color_str_from_dict("nozzle_diameter", self.file.meta), classes='--cell')
-                    yield Static(color_str_from_dict('uploaded', self.file.model_dump(), is_timestamp=True))
 
 
 class EventContainer(Widget):
@@ -241,6 +160,7 @@ class HistoryContainer(Widget):
         self.border_title = title
         self.add_class('--dashboard-category')
         self.item_type = item_type
+        self.can_focus = True
 
     def compose(self) -> ComposeResult:
         for i, item in enumerate(self.items):
@@ -264,10 +184,8 @@ class DashboardPane(TabPane):
             with Container(id='currently-printing-placeholder'):
                 yield CurrentlyPrinting(printer=self.printer, file=self.client.get_jobs(limit=1)[0].file)
 
-            yield HistoryContainer(items=self.client.get_files(self.printer.uuid.get_secret_value(), limit=3),
-                                   item_type=PrintFile,
-                                   title="Latest file uploads")
+            yield FileHistory(files=self.client.get_files(self.printer.uuid.get_secret_value(), limit=3))
             yield HistoryContainer(items=self.client.get_jobs(limit=3),
-                                   item_type=PrintJob,
+                                   item_type=PrintJobWidget,
                                    title="Print history")
             yield EventContainer()

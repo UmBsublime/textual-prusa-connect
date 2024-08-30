@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Callable
 
 from rich.text import TextType
@@ -14,8 +12,8 @@ from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
 from textual_prusa_connect.messages import PrinterUpdated
-from textual_prusa_connect.widgets.dashboard import CurrentlyPrinting, PrintJob, DashboardPane
-from textual_prusa_connect.widgets.tool import ToolList
+from textual_prusa_connect.widgets.dashboard import DashboardPane
+from textual_prusa_connect.widgets.file import PrintJobWidget
 
 SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
@@ -77,7 +75,8 @@ class PrusaConnectApp(App):
 
     BINDINGS = [('p', 'toggle_refresh', 'Pause'),
                 ('s', 'screenshot', 'Take screenshot'),
-                ('q', 'quit', 'Quit')]
+                ('q', 'quit', 'Quit'),
+                ('d', 'dump', 'Dump tree')]
     CSS_PATH = "css.tcss"
     do_refresh = True
     refresh_rate = PRINTING_REFRESH
@@ -100,7 +99,7 @@ class PrusaConnectApp(App):
 
                 def load_print_history():
                     jobs = self.client.get_jobs(limit=25)
-                    return [PrintJob(job) for job in jobs]
+                    return [PrintJobWidget(job) for job in jobs]
                 yield LazyTabPane("Print history", load_print_history)
 
                 yield TabPane("Control", disabled=True)
@@ -109,6 +108,7 @@ class PrusaConnectApp(App):
                 yield TabPane("Settings", disabled=True)
                 with TabPane("App logs", id='logs'):
                     yield RichLog()
+
 
     def on_mount(self):
         self.screen.set_focus(None)
@@ -145,6 +145,9 @@ class PrusaConnectApp(App):
         if init:
             self.query_one(RichLog).write(self.printer)
         # self.query_one(RichLog).write(f'updated {self.refresh_rate}')
+
+    def action_dump(self):
+        self.query_one(RichLog).write(self.tree)
 
     def action_toggle_refresh(self):
         if self.do_refresh:

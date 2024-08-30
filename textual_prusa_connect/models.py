@@ -33,6 +33,8 @@ class Printer(BaseModel):
     uuid: SecretStr
 
 
+
+
 class BasicPrinter(BaseModel):
     printer_state: str
     temp: dict
@@ -49,24 +51,6 @@ class BasicPrinter(BaseModel):
     uuid: str
     job_info: dict = None
     axis_z: float = None
-
-    def basic_info(self) -> str:
-        return_val = f"""\
-name: [blue]{self.name}[/blue] \
-printer_model: [blue]{self.printer_model}[/blue]
-state: [blue]{self.printer_state}[/blue] \
-filament: [blue]{self.filament['material']}[/blue]
-nozzle: [green]{self.temp['temp_nozzle']}/{self.temp['target_nozzle']}[/green] \
-bed: [green]{self.temp['temp_bed']}/{self.temp['target_bed']}[/green]"""
-        if self.printer_state == 'PRINTING':
-            elapsed = datetime.timedelta(seconds=self.job_info['time_printing'])
-            remaining = datetime.timedelta(seconds=self.job_info['time_remaining'])
-            return_val += f""" toolhead: [green]{self.slot['active']}[/]
-[yellow]{self.job_info["display_name"]}[/]
-progress: [yellow]{int(self.job_info['progress']):d}%[/] \
-print time: [yellow]{elapsed}[/] \
-time left: [yellow]{remaining}[/]"""
-        return return_val
 
 
 class Job(BaseModel):
@@ -102,6 +86,14 @@ class File(BaseModel):
     sync: dict
     preview_url: Optional[str] = None
     preview_mimetype: Optional[str] = None
+
+
+class PrintFile(File):
+    ...
+
+
+class FirmwareFile(File):
+    ...
 
 
 class Tool(BaseModel):

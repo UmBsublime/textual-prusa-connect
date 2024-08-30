@@ -1,12 +1,13 @@
 import datetime
 
-from textual.containers import Vertical, Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Static, Button
+from textual.widgets import Button, Static
 
 from textual_prusa_connect.messages import PrinterUpdated
 from textual_prusa_connect.models import Printer
+from textual_prusa_connect.widgets import Pretty
 
 
 class PrinterHeader(Widget):
@@ -39,19 +40,19 @@ class PrinterHeader(Widget):
         with Horizontal():
             yield Static("  🖨   ", id='icon')
             with Vertical(classes='--cell'):
-                yield Static(f"name: [blue]{self.printer.name} - {self.printer.printer_model}")
-                yield Static(f"state: [blue]{self.printer.printer_state}", classes='--lighter-background')
-                yield Static(f"location: [blue]{self.printer.location}")
+                yield Pretty(self.printer, 'printer_state', classes='--lighter-background')
+                yield Pretty(self.printer, 'location')
+                yield Pretty(self.printer, 'firmware')
             with Vertical(classes='--cell'):
-                yield Static(f"tool: [blue]{self.printer.slot['active']}/{self.printer.slots}")
-                yield Static(f"nozzle diameter: [blue]{self.printer.nozzle_diameter}", classes='--lighter-background')
-                yield Static(f"material: [blue]{self.printer.filament['material']}")
+                yield Pretty(self.printer.filament, 'material')
+                yield Pretty(self.printer, 'nozzle_diameter', classes='--lighter-background')
+                yield Pretty([self.printer.slot, self.printer.slots], 'active')
             with Vertical(classes='--cell'):
-                yield Static(f"nozzle temp: [blue]{self.printer.temp['temp_nozzle']}/{self.printer.temp['target_nozzle']}")
-                yield Static(f"bed temp: [blue]{self.printer.temp['temp_bed']}/{self.printer.temp['target_bed']}", classes='--lighter-background')
-                yield Static(f"current z: [blue]{self.printer.axis_z}mm")
+                yield Pretty([self.printer.temp, self.printer.temp['target_nozzle']], 'temp_nozzle')
+                yield Pretty([self.printer.temp, self.printer.temp['target_bed']], 'temp_bed', classes='--lighter-background')
+                yield Pretty(self.printer, 'axis_z', unit='mm')
             with Vertical():
-                yield Static(f"speed: [blue]{self.printer.speed}%")
+                yield Pretty(self.printer, 'speed', unit='%')
                 if self.printer.job_info:
                     yield Static(f"progress: [blue]{self.printer.job_info['progress']:.1f}%", classes='--lighter-background')
                 else:

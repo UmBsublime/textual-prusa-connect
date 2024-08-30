@@ -53,3 +53,24 @@ Vertical, Horizontal {
 PercentageStatus {
   color: slateblue;
 }
+
+Pretty {
+  height: 1;
+  width: 1fr;
+
+}
+
+FirmwareFileWidget, PrintFileWidget {
+  height: auto;
+}
+
+FileHistory {
+  height: auto;
+}
+
+PrintJobWidget {
+  Static {
+    width: 1fr;
+  }
+}
+

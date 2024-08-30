@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from requests import Session
 
-from textual_prusa_connect.models import Printer, Job, File, Event
+from textual_prusa_connect.models import Event, File, Job, Printer, FirmwareFile, PrintFile
 
 
 class PrusaConnectAPI:
@@ -34,7 +34,10 @@ class PrusaConnectAPI:
     def get_files(self, printer: str | None = None, limit: int = 1) -> list[File]:
         retval = []
         for file in self.session.get(f'{self.base_url}printers/{printer}/files?limit={limit}').json()['files']:
-            retval.append(File(**file))
+            if file['type'] == 'FIRMWARE':
+                retval.append(FirmwareFile(**file))
+            elif file['type'] == 'PRINT_FILE':
+                retval.append(PrintFile(**file))
         return retval
 
     def get_queue(self):

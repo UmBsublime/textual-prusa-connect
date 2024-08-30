@@ -1,13 +1,12 @@
 from typing import Literal
 
-from textual.containers import Vertical, Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Static
 
 from textual_prusa_connect.messages import PrinterUpdated
 from textual_prusa_connect.models import Printer, Tool
-from textual_prusa_connect.utils import nicer_string
+from textual_prusa_connect.widgets import Pretty
 
 
 class ToolDetails(Widget):
@@ -18,17 +17,25 @@ class ToolDetails(Widget):
     }
     """
 
-    def __init__(self, tool: Tool, color: Literal['blue', 'green', 'orange']='blue'):
+    def __init__(self, tool: Tool, color: Literal['blue', 'green', 'orange'] = 'blue'):
         super().__init__()
         self.tool = tool
         self.color = color
 
     def compose(self):
-        with Vertical():
+        """with Vertical():
             for i, item in enumerate(self.tool.model_dump().items()):
                 k, v = item
                 odd = i % 2 != 0
                 field = Static(f"{nicer_string(k)}: [{self.color}]{v}")
+                if odd:
+                    field.add_class('--lighter-background')
+                yield field"""
+
+        with Vertical():
+            for i, attr in enumerate(self.tool.model_dump().keys()):
+                odd = i % 2 != 0
+                field = Pretty(self.tool, attr, self.color)
                 if odd:
                     field.add_class('--lighter-background')
                 yield field
