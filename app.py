@@ -12,6 +12,7 @@ from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
 from textual_prusa_connect.messages import PrinterUpdated
+from textual_prusa_connect.models import Printer
 from textual_prusa_connect.widgets.dashboard import DashboardPane
 from textual_prusa_connect.widgets.file import PrintJobWidget
 
@@ -19,6 +20,21 @@ SETTINGS = AppSettings()
 PRINTING_REFRESH = 5
 MAIN_REFRESH = 30
 OTHER_REFRESH = 30
+
+dummy = {
+    'filament': {},
+    'firmware': 'dummy',
+    'location': 'dummy',
+    'printer_model': 'dummy',
+    'printer_state': 'dummy',
+    'printer_type': 'dummy',
+    'printer_type_name': 'dummy',
+    'name': 'dummy',
+    'nozzle_diameter': 0.0,
+    'slots': 0,
+    'supported_printer_models': [],
+    'uuid': SETTINGS.printer_uuid,
+}
 
 
 class DataLoaded(Message):
@@ -86,6 +102,7 @@ class PrusaConnectApp(App):
         self.refresh_timer = None
         self.client = PrusaConnectAPI(headers)
         self.printer = self.client.get_printer(SETTINGS.printer_uuid)
+        # self.printer = Printer(**dummy)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -112,7 +129,8 @@ class PrusaConnectApp(App):
 
     def on_mount(self):
         self.screen.set_focus(None)
-        self.update_printer(True)
+        #self.update_printer(True)
+        self.query_one(RichLog).write(self.printer)
         self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
         self.set_interval(MAIN_REFRESH, self.background_loop)
 
@@ -136,14 +154,13 @@ class PrusaConnectApp(App):
             #if self.printer.printer_state != 'PRINTING':
             #    self.query_one(CurrentlyPrinting).remove()
             # NOT WORKING Started a new print, let's recompose to add the block back
-            if new_printer.printer_state == 'PRINTING':
-                self.query_one(DashboardPane).recompose()
+            #if new_printer.printer_state == 'PRINTING':
+            #    self.query_one(DashboardPane).recompose()
 
         for widget in self.query('.--requires-printer'):
             widget.post_message(PrinterUpdated(printer=new_printer))
         self.printer = new_printer
-        if init:
-            self.query_one(RichLog).write(self.printer)
+
         # self.query_one(RichLog).write(f'updated {self.refresh_rate}')
 
     def action_dump(self):

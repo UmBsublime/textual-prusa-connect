@@ -53,19 +53,13 @@ class CurrentlyPrinting(Widget):
 
 
     def compose(self) -> ComposeResult:
-
         """
-          'estimated_printing_time_normal_mode': '8h 50m 57s',
-
-          'total_height': 47.45,
-          'max_layer_z': 47.45,
-          'filament_used_mm3': 167200.0,
-          'filament_used_cm3': 167.2,
-          'filament_used_m': 69.51575,
-          'filament_used_mm': 69515.75,
-          'filament_used_g': 207.33,
-
-    """
+      'estimated_printing_time_normal_mode': '8h 50m 57s',
+      'max_layer_z': 47.45,
+      'filament_used_mm3': 167200.0,
+      'filament_used_cm3': 167.2,
+      'filament_used_mm': 69515.75,
+        """
         try:
             with Horizontal(classes='--main') as main:
                 main.styles.padding = (0, 0, 1, 0)

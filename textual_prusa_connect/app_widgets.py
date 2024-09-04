@@ -48,8 +48,8 @@ class PrinterHeader(Widget):
                 yield Pretty(self.printer, 'nozzle_diameter', classes='--lighter-background')
                 yield Pretty([self.printer.slot, self.printer.slots], 'active')
             with Vertical(classes='--cell'):
-                yield Pretty([self.printer.temp, self.printer.temp['target_nozzle']], 'temp_nozzle')
-                yield Pretty([self.printer.temp, self.printer.temp['target_bed']], 'temp_bed', classes='--lighter-background')
+                yield Pretty([self.printer.temp, self.printer.temp.get('target_nozzle', None)], 'temp_nozzle')
+                yield Pretty([self.printer.temp, self.printer.temp.get('target_bed', None)], 'temp_bed', classes='--lighter-background')
                 yield Pretty(self.printer, 'axis_z', unit='mm')
             with Vertical():
                 yield Pretty(self.printer, 'speed', unit='%')
