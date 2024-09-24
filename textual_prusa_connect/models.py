@@ -9,7 +9,7 @@ class Printer(BaseModel):
     axis_x: Optional[float] = None
     axis_y: Optional[float] = None
     axis_z: Optional[float] = None
-    filament: dict
+    filament: dict = {}
     firmware: str
     flow: Optional[int] = None
     job_info: Optional[dict] = {}

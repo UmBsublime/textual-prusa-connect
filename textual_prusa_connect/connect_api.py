@@ -5,6 +5,18 @@ from requests import Session
 from textual_prusa_connect.models import Event, File, Job, Printer, FirmwareFile, PrintFile
 
 
+class ResourceNotFound(Exception):
+    ...
+
+
+class Unauthorized(Exception):
+    ...
+
+
+class Wtf(Exception):
+    ...
+
+
 class PrusaConnectAPI:
     def __init__(self, headers: dict[str, str]):
         self.base_url = "https://connect.prusa3d.com/app/"
@@ -20,6 +32,10 @@ class PrusaConnectAPI:
         response = self.session.get(f"{self.base_url}printers/{printer_id}")
         if response.ok:
             return Printer(**response.json())
+        elif response.status_code == 404:
+            raise ResourceNotFound(f"{response.status_code}: {response.text}")
+        elif response.status_code in (401, 403):
+            raise Unauthorized(f"{response.status_code}: {response.text}")
         return None
 
     def get_storage(self):

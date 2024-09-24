@@ -12,7 +12,6 @@ from textual_prusa_connect.config import AppSettings
 from textual_prusa_connect.connect_api import PrusaConnectAPI
 from textual_prusa_connect.app_widgets import PrinterHeader
 from textual_prusa_connect.messages import PrinterUpdated
-from textual_prusa_connect.models import Printer
 from textual_prusa_connect.widgets.dashboard import DashboardPane
 from textual_prusa_connect.widgets.file import PrintJobWidget
 
@@ -54,6 +53,8 @@ class LazyTabPane(TabPane):
 
     def compose(self) -> ComposeResult:
         yield VerticalScroll()
+        # LoadingIndicator adds some unwanted behaviour where "navigating"
+        # to the pane does not work, while "clicking" on the pane works as expected
         yield LoadingIndicator()
 
     @work
@@ -126,10 +127,9 @@ class PrusaConnectApp(App):
                 with TabPane("App logs", id='logs'):
                     yield RichLog()
 
-
     def on_mount(self):
         self.screen.set_focus(None)
-        #self.update_printer(True)
+        # self.update_printer(True)
         self.query_one(RichLog).write(self.printer)
         self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer)
         self.set_interval(MAIN_REFRESH, self.background_loop)
@@ -144,17 +144,17 @@ class PrusaConnectApp(App):
             self.query_one(RichLog).write(f'new rate {self.refresh_rate}')
             self.refresh_timer = self.set_interval(self.refresh_rate, self.update_printer, pause=not self.do_refresh)
 
-    def update_printer(self, init: bool = False):
+    def update_printer(self):
         new_printer = self.client.get_printer(self.printer.uuid.get_secret_value())
         if self.printer.printer_state != new_printer.printer_state:
             self.notify(f"{self.printer.printer_state} -> {new_printer.printer_state}",
                         title='State change',
                         timeout=10)
             # We are no longer printing, let's remove the currently printing block
-            #if self.printer.printer_state != 'PRINTING':
+            # if self.printer.printer_state != 'PRINTING':
             #    self.query_one(CurrentlyPrinting).remove()
             # NOT WORKING Started a new print, let's recompose to add the block back
-            #if new_printer.printer_state == 'PRINTING':
+            # if new_printer.printer_state == 'PRINTING':
             #    self.query_one(DashboardPane).recompose()
 
         for widget in self.query('.--requires-printer'):
@@ -179,8 +179,10 @@ class PrusaConnectApp(App):
 
 
 if __name__ == '__main__':
+    from textual_prusa_connect.version import __version__
     my_headers = {
-        'cookie': f'SESSID="{SETTINGS.session_id}"'
+        'cookie': f'SESSID="{SETTINGS.session_id}"',
+        'User-Agent': f"textual-prusa-connect/{__version__}"
     }
     app = PrusaConnectApp(my_headers)
     app.run()
